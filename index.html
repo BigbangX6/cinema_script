@@ -168,7 +168,7 @@
     <div class="app-container">
         <div class="left-panel">
             
-            <!-- NOUVEAU BANDEAU D'INSTALLATION -->
+            <!-- BANDEAU D'INSTALLATION -->
             <div class="app-banner">
                 <div class="app-banner-info">
                     <img src="./icon.png" alt="Icon" class="app-banner-icon" onerror="this.style.display='none'">
@@ -640,7 +640,18 @@
             const com = document.getElementById('com').value;
             const nextTake = db.takes.filter(t => t.seqId === activeSeq && t.planId === activePlan).length + 1;
             
-            db.takes.push({ seqId: activeSeq, planId: activePlan, prise: nextTake, avis: avis, com: com });
+            // --- NOUVEAUTÉ : HORODATAGE PRÉCIS ---
+            const timestamp = new Date().toISOString(); 
+            
+            db.takes.push({ 
+                seqId: activeSeq, 
+                planId: activePlan, 
+                prise: nextTake, 
+                avis: avis, 
+                com: com,
+                timestamp: timestamp
+            });
+            
             document.getElementById('com').value = '';
             openPlan = activePlan; 
             
@@ -737,8 +748,13 @@
             csv += "--- PLANS ---\nseqId;planId;impro;info;temps\n";
             db.plans.forEach(p => { csv += `${p.seqId};${p.id};${p.impro};${p.info.replace(/;/g, ",").replace(/\n/g, " ")};${p.temps || ''}\n`; });
             
-            csv += "--- TAKES ---\nseqId;planId;priseId;avis;com\n";
-            db.takes.forEach(t => { csv += `${t.seqId};${t.planId};${t.prise};${t.avis};${t.com.replace(/;/g, ",").replace(/\n/g, " ")}\n`; });
+            // --- NOUVEAUTÉ : Ajout de la colonne timestamp ---
+            csv += "--- TAKES ---\nseqId;planId;priseId;avis;com;timestamp\n";
+            db.takes.forEach(t => { 
+                let safeCom = t.com ? t.com.replace(/;/g, ",").replace(/\n/g, " ") : "";
+                let safeTime = t.timestamp ? t.timestamp : "";
+                csv += `${t.seqId};${t.planId};${t.prise};${t.avis};${safeCom};${safeTime}\n`; 
+            });
             
             return csv;
         }
@@ -824,7 +840,15 @@
                         db.plans.push({ seqId: parseInt(cols[0]), id: parseInt(cols[1]), impro: parseInt(cols[2])||0, info: cols[3], temps: cols[4]||"" });
                     }
                     if(currentSection === "TAKES" && cols.length >= 5) {
-                        db.takes.push({ seqId: parseInt(cols[0]), planId: parseInt(cols[1]), prise: parseInt(cols[2]), avis: cols[3], com: cols[4] });
+                        db.takes.push({ 
+                            seqId: parseInt(cols[0]), 
+                            planId: parseInt(cols[1]), 
+                            prise: parseInt(cols[2]), 
+                            avis: cols[3], 
+                            com: cols[4],
+                            // --- NOUVEAUTÉ : Lecture du timestamp s'il existe ---
+                            timestamp: cols[5] || ""
+                        });
                     }
                 }
                 
