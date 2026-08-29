@@ -94,7 +94,9 @@
         
         .acc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .acc-title { display: flex; align-items: center; cursor: pointer; flex-grow: 1; user-select: none; }
-        .header-label { font-weight: bold; font-size: 1.2rem; margin-right: 10px; }
+        .header-label { font-weight: bold; font-size: 1.2rem; margin-right: 10px; display: flex; align-items: center; gap: 8px; }
+        .edit-seq-btn { font-size: 1rem; cursor: pointer; padding: 2px; border-radius: 4px; transition: 0.2s; opacity: 0.7; }
+        .edit-seq-btn:hover { opacity: 1; background: rgba(255,255,255,0.2); }
         .chevron { font-size: 0.9rem; opacity: 0.7; }
         
         .header-input { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; font-size: 1rem; border-radius: 5px; width: 100%; box-sizing: border-box; resize: none; overflow: hidden; line-height: 1.4; font-family: inherit; }
@@ -114,11 +116,11 @@
         .btn-delete { background: #d0021b; color: white; border: none; padding: 8px 12px; border-radius: 5px; cursor: pointer; }
         
         /* -- MODE TOURNAGE -- */
-        .mode-toggle { display: flex; margin-bottom: 10px; background: var(--border-color); border-radius: 8px; overflow: hidden; }
-        .mode-btn { flex: 1; padding: 10px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-weight: bold; transition: 0.2s; }
+        .mode-toggle { display: flex; margin-bottom: 20px; background: var(--border-color); border-radius: 8px; overflow: hidden; }
+        .mode-btn { flex: 1; padding: 12px; border: none; background: transparent; color: var(--text-muted); cursor: pointer; font-weight: bold; transition: 0.2s; font-size: 1.1rem; }
         .mode-btn.active { background: #4a90e2; color: white; }
         
-        .tournage-list { margin-top: 10px; display: flex; flex-direction: column; gap: 8px; }
+        .tournage-list { display: flex; flex-direction: column; gap: 8px; }
         .tournage-item { display: flex; align-items: center; gap: 10px; background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; }
         .tournage-sep { background: #5a3c20; border-left: 4px solid #f5a623; }
         .tournage-handle { cursor: ns-resize; opacity: 0.5; font-size: 1.2rem; }
@@ -218,10 +220,15 @@
         </div>
 
         <div class="right-panel">
+            <div class="mode-toggle">
+                <button id="btnModeDecoupage" class="mode-btn active" onclick="setViewMode('decoupage')">📖 Mode Découpage (Scénario)</button>
+                <button id="btnModeTournage" class="mode-btn" onclick="setViewMode('tournage')">🎥 Mode Plan de Travail (Global)</button>
+            </div>
+
             <div id="accordionContainer">
                 <!-- Généré par JavaScript -->
             </div>
-            <button class="btn-add" style="width: 100%; border-color: #4a90e2; color: #4a90e2; margin-top: 15px;" onclick="addSequence()">+ NOUVELLE SÉQUENCE</button>
+            <button id="btnAddSeq" class="btn-add" style="width: 100%; border-color: #4a90e2; color: #4a90e2; margin-top: 15px;" onclick="addSequence()">+ NOUVELLE SÉQUENCE</button>
         </div>
     </div>
 
@@ -273,27 +280,42 @@
             projectName: "", 
             sequences: [], 
             plans: [], 
-            takes: [] 
+            takes: [],
+            tournageList: [] 
         };
 
+        let viewMode = 'decoupage'; // Mode global: 'decoupage' ou 'tournage'
         let openSeq = null;     
         let openPlan = null;    
         let activeSeq = null;   
         let activePlan = null;  
         let fileHandle = null;
 
-        // --- INITIALISATION ---
+        // --- INITIALISATION & MIGRATION V3 ---
         if (localStorage.getItem('kinoDB_v2')) {
             db = JSON.parse(localStorage.getItem('kinoDB_v2'));
-            db.sequences.forEach(s => {
-                if(!s.tournageList) {
-                    s.modeTournage = false;
-                    s.tournageList = db.plans.filter(p => p.seqId === s.id).map(p => ({type: 'plan', id: p.id}));
-                }
-            });
+            
+            // Migration: Transformer les listes de tournage par séquence en une liste globale
+            if (!db.tournageList) {
+                db.tournageList = [];
+                db.sequences.forEach(s => {
+                    if(s.tournageList) {
+                        s.tournageList.forEach(item => {
+                            if (item.type === 'plan') {
+                                db.tournageList.push({ type: 'plan', seqId: s.id, planId: item.id });
+                            } else if (item.type === 'sep') {
+                                db.tournageList.push({ type: 'sep', text: item.text });
+                            }
+                        });
+                        delete s.tournageList;
+                        delete s.modeTournage;
+                    }
+                });
+            }
         } else {
-            db.sequences.push({ id: 1, info: "", modeTournage: false, tournageList: [{type: 'plan', id: 1}] });
+            db.sequences.push({ id: 1, info: "" });
             db.plans.push({ seqId: 1, id: 1, impro: 0, info: "", temps: "" });
+            db.tournageList.push({ type: 'plan', seqId: 1, planId: 1 });
             openSeq = 1;
         }
 
@@ -337,56 +359,59 @@
             document.getElementById('projNameDisp').innerText = db.projectName || "Nouveau Projet";
         }
 
+        function setViewMode(mode) {
+            viewMode = mode;
+            renderApp();
+        }
+
         // --- MOTEUR DE RENDU UI ---
         function renderApp() {
             renderProjectName();
             const container = document.getElementById('accordionContainer');
             container.innerHTML = '';
+            
+            document.getElementById('btnModeDecoupage').className = `mode-btn ${viewMode === 'decoupage' ? 'active' : ''}`;
+            document.getElementById('btnModeTournage').className = `mode-btn ${viewMode === 'tournage' ? 'active' : ''}`;
+            document.getElementById('btnAddSeq').style.display = viewMode === 'decoupage' ? 'block' : 'none';
 
-            db.sequences.forEach(seq => {
-                const seqHeader = document.createElement('div');
-                seqHeader.className = 'acc-header acc-seq';
-                
-                const seqTop = document.createElement('div');
-                seqTop.className = 'acc-top';
-                seqTop.innerHTML = `
-                    <div class="acc-title" onclick="toggleSeq(${seq.id})">
-                        <span class="header-label">SÉQ ${seq.id}</span>
-                        <span class="chevron">${openSeq === seq.id ? '▼' : '▶'}</span>
-                    </div>
-                    <div class="inline-actions">
-                        <button class="btn-icon" onclick="insertSeqBefore(${seq.id})" title="Insérer avant">➕</button>
-                        <button class="btn-icon" onclick="deleteSeq(${seq.id})" title="Supprimer">❌</button>
-                    </div>
-                `;
-                seqHeader.appendChild(seqTop);
+            if (viewMode === 'decoupage') {
+                // --- MODE DÉCOUPAGE NORMAL (SÉQUENCES > PLANS) ---
+                db.sequences.forEach(seq => {
+                    const seqHeader = document.createElement('div');
+                    seqHeader.className = 'acc-header acc-seq';
+                    
+                    const seqTop = document.createElement('div');
+                    seqTop.className = 'acc-top';
+                    seqTop.innerHTML = `
+                        <div class="acc-title" onclick="toggleSeq(${seq.id})">
+                            <span class="header-label">
+                                SÉQ ${seq.id} 
+                                <span class="edit-seq-btn" onclick="editSeqId(${seq.id}, event)" title="Modifier le numéro de Séquence">✏️</span>
+                            </span>
+                            <span class="chevron">${openSeq === seq.id ? '▼' : '▶'}</span>
+                        </div>
+                        <div class="inline-actions">
+                            <button class="btn-icon" onclick="insertSeqBefore(${seq.id})" title="Insérer avant">➕</button>
+                            <button class="btn-icon" onclick="deleteSeq(${seq.id})" title="Supprimer">❌</button>
+                        </div>
+                    `;
+                    seqHeader.appendChild(seqTop);
 
-                const seqInput = document.createElement('textarea');
-                seqInput.className = 'header-input';
-                seqInput.rows = 1;
-                seqInput.placeholder = "Infos Séquence (Lieu, personnages...)";
-                seqInput.value = seq.info;
-                seqInput.oninput = function() { autoResizeTextarea(this); seq.info = this.value; saveDataSilently(); };
-                seqInput.onchange = () => writeToFileAPI(false); 
-                
-                seqHeader.appendChild(seqInput);
-                container.appendChild(seqHeader);
-                setTimeout(() => autoResizeTextarea(seqInput), 0);
+                    const seqInput = document.createElement('textarea');
+                    seqInput.className = 'header-input';
+                    seqInput.rows = 1;
+                    seqInput.placeholder = "Infos Séquence (Lieu, personnages...)";
+                    seqInput.value = seq.info;
+                    seqInput.oninput = function() { autoResizeTextarea(this); seq.info = this.value; saveDataSilently(); };
+                    seqInput.onchange = () => writeToFileAPI(false); 
+                    
+                    seqHeader.appendChild(seqInput);
+                    container.appendChild(seqHeader);
+                    setTimeout(() => autoResizeTextarea(seqInput), 0);
 
-                const seqContent = document.createElement('div');
-                seqContent.className = `acc-content ${openSeq === seq.id ? 'open' : ''}`;
+                    const seqContent = document.createElement('div');
+                    seqContent.className = `acc-content ${openSeq === seq.id ? 'open' : ''}`;
 
-                // -- TOGGLE DÉCOUPAGE / TOURNAGE --
-                const modeToggle = document.createElement('div');
-                modeToggle.className = 'mode-toggle';
-                modeToggle.innerHTML = `
-                    <button class="mode-btn ${!seq.modeTournage ? 'active' : ''}" onclick="switchMode(${seq.id}, false)">Ordre Scénario (Montage)</button>
-                    <button class="mode-btn ${seq.modeTournage ? 'active' : ''}" onclick="switchMode(${seq.id}, true)">Ordre de Tournage (Logistique)</button>
-                `;
-                seqContent.appendChild(modeToggle);
-
-                // --- RENDU : MODE DÉCOUPAGE NORMAL ---
-                if (!seq.modeTournage) {
                     const seqPlans = db.plans.filter(p => p.seqId === seq.id).sort((a,b) => a.id - b.id);
                     seqPlans.forEach(plan => {
                         const isActive = (activeSeq === seq.id && activePlan === plan.id);
@@ -447,59 +472,58 @@
                         <button class="btn-add" style="color: #f5a623; border-color: #f5a623;" onclick="addPlan(${seq.id}, 1)">+ Plan Impro (Fin)</button>
                     `;
                     seqContent.appendChild(addRow);
-                } 
-                // --- RENDU : MODE TOURNAGE ---
-                else {
-                    const tournageContainer = document.createElement('div');
-                    tournageContainer.className = 'tournage-list';
+                    container.appendChild(seqContent);
+                });
 
-                    seq.tournageList.forEach((item, index) => {
-                        const tItem = document.createElement('div');
-                        tItem.className = `tournage-item ${item.type === 'sep' ? 'tournage-sep' : ''}`;
-                        
-                        const controls = `
-                            <div style="display:flex; flex-direction:column;">
-                                <span class="tournage-handle" onclick="moveTournageItem(${seq.id}, ${index}, -1)">▲</span>
-                                <span class="tournage-handle" onclick="moveTournageItem(${seq.id}, ${index}, 1)">▼</span>
-                            </div>
-                        `;
+            } else {
+                // --- MODE TOURNAGE GLOBAL (LISTE PLATE ET ORGANISABLE) ---
+                const tournageContainer = document.createElement('div');
+                tournageContainer.className = 'tournage-list';
 
-                        if (item.type === 'plan') {
-                            const p = db.plans.find(x => x.seqId === seq.id && x.id === item.id);
-                            if(!p) return; // Sécurité
-                            const takesCount = db.takes.filter(t => t.seqId === seq.id && t.planId === p.id).length;
-                            const badge = takesCount > 0 ? `<span class="take-badge">🎥 ${takesCount} prises</span>` : '';
-                            
-                            tItem.innerHTML = `
-                                ${controls}
-                                <div style="font-weight:bold; width: 80px;">PLAN ${p.id}</div>
-                                <div style="flex-grow:1; opacity:0.8; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.info || '...'}</div>
-                                <input type="text" class="header-input" style="width: 90px; margin:0;" placeholder="Temps..." value="${p.temps || ''}" onchange="updatePlanTemps(${seq.id}, ${p.id}, this.value)">
-                                ${badge}
-                            `;
-                        } else if (item.type === 'sep') {
-                            tItem.innerHTML = `
-                                ${controls}
-                                <div style="font-weight:bold; color:#f5a623;">SÉPARATEUR</div>
-                                <input type="text" class="header-input" style="flex-grow:1; margin:0;" placeholder="Ex: Lundi Matin..." value="${item.text || ''}" onchange="updateSepText(${seq.id}, ${index}, this.value)">
-                                <button class="btn-icon" onclick="deleteSep(${seq.id}, ${index})">❌</button>
-                            `;
-                        }
-                        tournageContainer.appendChild(tItem);
-                    });
+                db.tournageList.forEach((item, index) => {
+                    const tItem = document.createElement('div');
+                    tItem.className = `tournage-item ${item.type === 'sep' ? 'tournage-sep' : ''}`;
                     
-                    const btnAddSep = document.createElement('button');
-                    btnAddSep.className = 'btn-add';
-                    btnAddSep.style.marginTop = '10px';
-                    btnAddSep.innerText = '+ Ajouter un Séparateur (Planning)';
-                    btnAddSep.onclick = () => addSeparator(seq.id);
-                    tournageContainer.appendChild(btnAddSep);
+                    const controls = `
+                        <div style="display:flex; flex-direction:column;">
+                            <span class="tournage-handle" onclick="moveGlobalTournageItem(${index}, -1)">▲</span>
+                            <span class="tournage-handle" onclick="moveGlobalTournageItem(${index}, 1)">▼</span>
+                        </div>
+                    `;
 
-                    seqContent.appendChild(tournageContainer);
-                }
+                    if (item.type === 'plan') {
+                        const p = db.plans.find(x => x.seqId === item.seqId && x.id === item.planId);
+                        if(!p) return; // Sécurité au cas où un plan orphelin traîne
+                        const takesCount = db.takes.filter(t => t.seqId === p.seqId && t.planId === p.id).length;
+                        const badge = takesCount > 0 ? `<span class="take-badge">🎥 ${takesCount} prises</span>` : '';
+                        
+                        tItem.innerHTML = `
+                            ${controls}
+                            <div style="font-weight:bold; width: 120px; color: #4a90e2; cursor: pointer;" onclick="activatePlan(${p.seqId}, ${p.id})">SÉQ ${p.seqId} - P ${p.id}</div>
+                            <div style="flex-grow:1; opacity:0.8; font-size:0.9rem; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.info || '...'}</div>
+                            <input type="text" class="header-input" style="width: 90px; margin:0;" placeholder="Temps..." value="${p.temps || ''}" onchange="updatePlanTemps(${p.seqId}, ${p.id}, this.value)">
+                            ${badge}
+                        `;
+                    } else if (item.type === 'sep') {
+                        tItem.innerHTML = `
+                            ${controls}
+                            <div style="font-weight:bold; color:#f5a623;">SÉPARATEUR</div>
+                            <input type="text" class="header-input" style="flex-grow:1; margin:0;" placeholder="Ex: Lundi Matin..." value="${item.text || ''}" onchange="updateGlobalSepText(${index}, this.value)">
+                            <button class="btn-icon" onclick="deleteGlobalSep(${index})">❌</button>
+                        `;
+                    }
+                    tournageContainer.appendChild(tItem);
+                });
+                
+                const btnAddSep = document.createElement('button');
+                btnAddSep.className = 'btn-add';
+                btnAddSep.style.marginTop = '10px';
+                btnAddSep.innerText = '+ Ajouter un Séparateur (Planning)';
+                btnAddSep.onclick = () => addGlobalSeparator();
+                tournageContainer.appendChild(btnAddSep);
 
-                container.appendChild(seqContent);
-            });
+                container.appendChild(tournageContainer);
+            }
 
             updateDashboard();
         }
@@ -520,30 +544,51 @@
             }
         }
 
-        // --- NAVIGATION & MODES ---
+        // --- NAVIGATION & GESTION NUMÉROTATION ---
         function toggleSeq(seqId) { openSeq = (openSeq === seqId) ? null : seqId; renderApp(); }
         function activatePlan(seqId, planId) { openSeq = seqId; openPlan = (openPlan === planId && activePlan === planId) ? null : planId; activeSeq = seqId; activePlan = planId; renderApp(); }
-        function switchMode(seqId, isTournage) { const seq = db.sequences.find(s => s.id === seqId); if(seq) { seq.modeTournage = isTournage; saveDataSilently(); renderApp(); } }
+        
+        function editSeqId(oldId, event) {
+            if(event) event.stopPropagation(); // Évite de plier/déplier l'accordéon
+            const newIdStr = prompt(`Modifier le numéro de la Séquence ${oldId} :`, oldId);
+            if(!newIdStr) return;
+            const newId = parseInt(newIdStr);
+            if(isNaN(newId) || newId <= 0) return alert("Numéro invalide.");
+            if(newId === oldId) return;
+            if(db.sequences.some(s => s.id === newId)) return alert("Ce numéro de séquence existe déjà.");
 
-        // --- GESTION TOURNAGE LIST ---
-        function moveTournageItem(seqId, index, dir) {
-            const seq = db.sequences.find(s => s.id === seqId);
-            if (index + dir < 0 || index + dir >= seq.tournageList.length) return;
-            const temp = seq.tournageList[index];
-            seq.tournageList[index] = seq.tournageList[index + dir];
-            seq.tournageList[index + dir] = temp;
+            // Mise à jour de l'ID partout dans la base
+            db.sequences.find(s => s.id === oldId).id = newId;
+            db.plans.filter(p => p.seqId === oldId).forEach(p => p.seqId = newId);
+            db.takes.filter(t => t.seqId === oldId).forEach(t => t.seqId = newId);
+            db.tournageList.filter(i => i.type === 'plan' && i.seqId === oldId).forEach(i => i.seqId = newId);
+
+            db.sequences.sort((a,b) => a.id - b.id);
+            
+            if (openSeq === oldId) openSeq = newId;
+            if (activeSeq === oldId) activeSeq = newId;
+
+            saveDataSilently(); renderApp(); writeToFileAPI(false);
+        }
+
+        // --- GESTION DU PLAN DE TRAVAIL GLOBAL ---
+        function moveGlobalTournageItem(index, dir) {
+            if (index + dir < 0 || index + dir >= db.tournageList.length) return;
+            const temp = db.tournageList[index];
+            db.tournageList[index] = db.tournageList[index + dir];
+            db.tournageList[index + dir] = temp;
             saveDataSilently(); renderApp(); writeToFileAPI(false);
         }
         function updatePlanTemps(seqId, planId, val) { const p = db.plans.find(x => x.seqId === seqId && x.id === planId); if(p) { p.temps = val; saveDataSilently(); writeToFileAPI(false); } }
-        function addSeparator(seqId) { const seq = db.sequences.find(s => s.id === seqId); seq.tournageList.push({type: 'sep', text: ''}); saveDataSilently(); renderApp(); writeToFileAPI(false); }
-        function updateSepText(seqId, index, val) { const seq = db.sequences.find(s => s.id === seqId); if(seq && seq.tournageList[index]) { seq.tournageList[index].text = val; saveDataSilently(); writeToFileAPI(false); } }
-        function deleteSep(seqId, index) { const seq = db.sequences.find(s => s.id === seqId); if(seq) { seq.tournageList.splice(index, 1); saveDataSilently(); renderApp(); writeToFileAPI(false); } }
+        function addGlobalSeparator() { db.tournageList.push({type: 'sep', text: ''}); saveDataSilently(); renderApp(); writeToFileAPI(false); }
+        function updateGlobalSepText(index, val) { if(db.tournageList[index]) { db.tournageList[index].text = val; saveDataSilently(); writeToFileAPI(false); } }
+        function deleteGlobalSep(index) { db.tournageList.splice(index, 1); saveDataSilently(); renderApp(); writeToFileAPI(false); }
 
         // --- CRUD SÉQUENCES ---
         async function addSequence() {
             await requireProjectName();
             const newSeqId = db.sequences.length > 0 ? Math.max(...db.sequences.map(s => s.id)) + 1 : 1;
-            db.sequences.push({ id: newSeqId, info: "", modeTournage: false, tournageList: [] });
+            db.sequences.push({ id: newSeqId, info: "" });
             openSeq = newSeqId;
             saveDataSilently(); renderApp(); await writeToFileAPI(true);
         }
@@ -553,8 +598,9 @@
             db.sequences.filter(s => s.id >= targetSeqId).forEach(s => s.id++);
             db.plans.filter(p => p.seqId >= targetSeqId).forEach(p => p.seqId++);
             db.takes.filter(t => t.seqId >= targetSeqId).forEach(t => t.seqId++);
+            db.tournageList.forEach(item => { if(item.type === 'plan' && item.seqId >= targetSeqId) item.seqId++; });
 
-            db.sequences.push({ id: targetSeqId, info: "", modeTournage: false, tournageList: [] });
+            db.sequences.push({ id: targetSeqId, info: "" });
             db.sequences.sort((a,b) => a.id - b.id);
 
             if (openSeq >= targetSeqId) openSeq++;
@@ -564,17 +610,14 @@
         }
 
         async function deleteSeq(seqId) {
-            if(!confirm(`⚠️ SUPPRIMER LA SÉQUENCE ${seqId} ?`)) return;
+            if(!confirm(`⚠️ SUPPRIMER LA SÉQUENCE ${seqId} ? (Tous ses plans seront effacés)`)) return;
             db.sequences = db.sequences.filter(s => s.id !== seqId);
             db.plans = db.plans.filter(p => p.seqId !== seqId);
             db.takes = db.takes.filter(t => t.seqId !== seqId);
+            db.tournageList = db.tournageList.filter(item => !(item.type === 'plan' && item.seqId === seqId));
 
-            db.sequences.filter(s => s.id > seqId).forEach(s => s.id--);
-            db.plans.filter(p => p.seqId > seqId).forEach(p => p.seqId--);
-            db.takes.filter(t => t.seqId > seqId).forEach(t => t.seqId--);
-
-            if(openSeq === seqId) openSeq = null; else if(openSeq > seqId) openSeq--;
-            if(activeSeq === seqId) { activeSeq = null; activePlan = null; } else if(activeSeq > seqId) activeSeq--;
+            if(openSeq === seqId) openSeq = null; 
+            if(activeSeq === seqId) { activeSeq = null; activePlan = null; } 
 
             saveDataSilently(); renderApp(); await writeToFileAPI(true);
         }
@@ -586,8 +629,7 @@
             const newPlanId = seqPlans.length > 0 ? Math.max(...seqPlans.map(p => p.id)) + 1 : 1;
             
             db.plans.push({ seqId: seqId, id: newPlanId, impro: isImpro, info: "", temps: "" });
-            const seq = db.sequences.find(s=>s.id === seqId);
-            seq.tournageList.push({type: 'plan', id: newPlanId});
+            db.tournageList.push({ type: 'plan', seqId: seqId, planId: newPlanId });
 
             activatePlan(seqId, newPlanId);
             saveDataSilently(); await writeToFileAPI(true);
@@ -601,11 +643,12 @@
             db.plans.push({ seqId: seqId, id: targetPlanId, impro: 0, info: "", temps: "" });
             db.plans.sort((a,b) => a.id - b.id);
 
-            const seq = db.sequences.find(s=>s.id === seqId);
-            seq.tournageList.forEach(item => { if(item.type === 'plan' && item.id >= targetPlanId) item.id++; });
-            const idx = seq.tournageList.findIndex(item => item.type === 'plan' && item.id === targetPlanId + 1);
-            if(idx !== -1) seq.tournageList.splice(idx, 0, {type: 'plan', id: targetPlanId});
-            else seq.tournageList.push({type: 'plan', id: targetPlanId});
+            db.tournageList.forEach(item => { if(item.type === 'plan' && item.seqId === seqId && item.planId >= targetPlanId) item.planId++; });
+            
+            // Cherche le point d'insertion dans la liste de tournage pour rester cohérent
+            const idx = db.tournageList.findIndex(item => item.type === 'plan' && item.seqId === seqId && item.planId === targetPlanId + 1);
+            if(idx !== -1) db.tournageList.splice(idx, 0, { type: 'plan', seqId: seqId, planId: targetPlanId });
+            else db.tournageList.push({ type: 'plan', seqId: seqId, planId: targetPlanId });
 
             if(openSeq === seqId && openPlan >= targetPlanId) openPlan++;
             if(activeSeq === seqId && activePlan >= targetPlanId) activePlan++;
@@ -618,16 +661,10 @@
             if(!confirm(`⚠️ SUPPRIMER LE PLAN ${planId} ?`)) return;
             db.plans = db.plans.filter(p => !(p.seqId === seqId && p.id === planId));
             db.takes = db.takes.filter(t => !(t.seqId === seqId && t.planId === planId));
+            db.tournageList = db.tournageList.filter(item => !(item.type === 'plan' && item.seqId === seqId && item.planId === planId));
 
-            db.plans.filter(p => p.seqId === seqId && p.id > planId).forEach(p => p.id--);
-            db.takes.filter(t => t.seqId === seqId && t.planId > planId).forEach(t => t.planId--);
-
-            const seq = db.sequences.find(s=>s.id === seqId);
-            seq.tournageList = seq.tournageList.filter(item => !(item.type === 'plan' && item.id === planId));
-            seq.tournageList.forEach(item => { if(item.type === 'plan' && item.id > planId) item.id--; });
-
-            if(openSeq === seqId && openPlan === planId) openPlan = null; else if(openSeq === seqId && openPlan > planId) openPlan--;
-            if(activeSeq === seqId && activePlan === planId) { activePlan = null; } else if(activeSeq === seqId && activePlan > planId) activePlan--;
+            if(openSeq === seqId && openPlan === planId) openPlan = null; 
+            if(activeSeq === seqId && activePlan === planId) { activePlan = null; }
 
             saveDataSilently(); renderApp(); await writeToFileAPI(true);
         }
@@ -639,8 +676,6 @@
             const avis = document.getElementById('avis').value;
             const com = document.getElementById('com').value;
             const nextTake = db.takes.filter(t => t.seqId === activeSeq && t.planId === activePlan).length + 1;
-            
-            // --- NOUVEAUTÉ : HORODATAGE PRÉCIS ---
             const timestamp = new Date().toISOString(); 
             
             db.takes.push({ 
@@ -676,30 +711,21 @@
             if (mode === 'tournage') {
                 html += `<div class="print-title">PLAN DE TOURNAGE / FEUILLE DE SERVICE</div>`;
                 html += `<div class="print-subtitle">PROJET : <strong>${db.projectName || 'Non nommé'}</strong> | ÉDITÉ LE : ${d.toLocaleDateString('fr-FR')}</div>`;
-                html += `<table><thead><tr><th style="width:5%">SÉQ</th><th style="width:5%">PLAN</th><th>DESCRIPTION / DÉCOUPAGE</th><th style="width:12%">TEMPS</th></tr></thead><tbody>`;
+                html += `<table><thead><tr><th style="width:10%">SÉQ - PLAN</th><th>DESCRIPTION / DÉCOUPAGE</th><th style="width:12%">TEMPS</th></tr></thead><tbody>`;
 
-                db.sequences.forEach(seq => {
-                    html += `<tr class="print-seq-row">
-                        <td><span class="print-seq-num">${seq.id}</span></td>
-                        <td></td>
-                        <td colspan="2"><span class="print-seq-info">${seq.info.replace(/\n/g, '<br>')}</span></td>
-                    </tr>`;
-
-                    seq.tournageList.forEach(item => {
-                        if (item.type === 'sep') {
-                            html += `<tr><td colspan="4" class="print-sep-row">--- ${item.text || 'SÉPARATEUR'} ---</td></tr>`;
-                        } else if (item.type === 'plan') {
-                            const plan = db.plans.find(p => p.seqId === seq.id && p.id === item.id);
-                            if(plan) {
-                                html += `<tr>
-                                    <td></td>
-                                    <td><strong>${plan.id}</strong> ${plan.impro ? '<br><i>(Impro)</i>' : ''}</td>
-                                    <td>${plan.info.replace(/\n/g, '<br>')}</td>
-                                    <td>${plan.temps || ''}</td>
-                                </tr>`;
-                            }
+                db.tournageList.forEach(item => {
+                    if (item.type === 'sep') {
+                        html += `<tr><td colspan="3" class="print-sep-row">--- ${item.text || 'SÉPARATEUR'} ---</td></tr>`;
+                    } else if (item.type === 'plan') {
+                        const plan = db.plans.find(p => p.seqId === item.seqId && p.id === item.planId);
+                        if(plan) {
+                            html += `<tr>
+                                <td><strong>S${plan.seqId} - P${plan.id}</strong> ${plan.impro ? '<br><i>(Impro)</i>' : ''}</td>
+                                <td>${plan.info.replace(/\n/g, '<br>')}</td>
+                                <td>${plan.temps || ''}</td>
+                            </tr>`;
                         }
-                    });
+                    }
                 });
                 html += `</tbody></table>`;
             } else if (mode === 'decoupage') {
@@ -740,15 +766,15 @@
             csv += "--- SEQUENCES ---\nseqId;info\n";
             db.sequences.forEach(s => { csv += `${s.id};${s.info.replace(/;/g, ",").replace(/\n/g, " ")}\n`; });
             
-            csv += "--- TOURNAGE_LIST ---\nseqId;type;refId;text\n";
-            db.sequences.forEach(s => {
-                s.tournageList.forEach(item => { csv += `${s.id};${item.type};${item.id || ''};${(item.text || '').replace(/;/g, ",")}\n`; });
+            // Format globalisé pour le mode tournage
+            csv += "--- TOURNAGE_LIST ---\ntype;seqId;planId;text\n";
+            db.tournageList.forEach(item => {
+                csv += `${item.type};${item.seqId || ''};${item.planId || ''};${(item.text || '').replace(/;/g, ",")}\n`;
             });
             
             csv += "--- PLANS ---\nseqId;planId;impro;info;temps\n";
             db.plans.forEach(p => { csv += `${p.seqId};${p.id};${p.impro};${p.info.replace(/;/g, ",").replace(/\n/g, " ")};${p.temps || ''}\n`; });
             
-            // --- NOUVEAUTÉ : Ajout de la colonne timestamp ---
             csv += "--- TAKES ---\nseqId;planId;priseId;avis;com;timestamp\n";
             db.takes.forEach(t => { 
                 let safeCom = t.com ? t.com.replace(/;/g, ",").replace(/\n/g, " ") : "";
@@ -811,7 +837,7 @@
                 let content = e.target.result;
                 if(content.charCodeAt(0) === 0xFEFF) content = content.substring(1);
                 
-                db = { projectName: "", sequences: [], plans: [], takes: [] };
+                db = { projectName: "", sequences: [], plans: [], takes: [], tournageList: [] };
                 
                 let currentSection = "";
                 const lines = content.split(/\r?\n/);
@@ -830,11 +856,15 @@
                     
                     const cols = line.split(';');
                     if(currentSection === "SEQUENCES" && cols.length >= 2) {
-                        db.sequences.push({ id: parseInt(cols[0]), info: cols[1], modeTournage: false, tournageList: [] });
+                        db.sequences.push({ id: parseInt(cols[0]), info: cols[1] });
                     }
                     if(currentSection === "TOURNAGE" && cols.length >= 4) {
-                        const seq = db.sequences.find(s => s.id === parseInt(cols[0]));
-                        if(seq) seq.tournageList.push({ type: cols[1], id: parseInt(cols[2]) || null, text: cols[3] });
+                        // Rétrocompatibilité : différencie l'ancien format (seqId;type;...) du nouveau (type;seqId;...)
+                        if (cols[1] === 'plan' || cols[1] === 'sep') {
+                            db.tournageList.push({ type: cols[1], seqId: parseInt(cols[0]) || null, planId: parseInt(cols[2]) || null, text: cols[3] });
+                        } else {
+                            db.tournageList.push({ type: cols[0], seqId: parseInt(cols[1]) || null, planId: parseInt(cols[2]) || null, text: cols[3] });
+                        }
                     }
                     if(currentSection === "PLANS" && cols.length >= 4) {
                         db.plans.push({ seqId: parseInt(cols[0]), id: parseInt(cols[1]), impro: parseInt(cols[2])||0, info: cols[3], temps: cols[4]||"" });
@@ -846,7 +876,6 @@
                             prise: parseInt(cols[2]), 
                             avis: cols[3], 
                             com: cols[4],
-                            // --- NOUVEAUTÉ : Lecture du timestamp s'il existe ---
                             timestamp: cols[5] || ""
                         });
                     }
@@ -854,7 +883,7 @@
                 
                 saveDataSilently();
                 openSeq = db.sequences.length > 0 ? db.sequences[0].id : null;
-                openPlan = null; activeSeq = null; activePlan = null;
+                openPlan = null; activeSeq = null; activePlan = null; viewMode = 'decoupage';
                 renderApp();
                 fileHandle = null;
                 alert("✅ Projet chargé avec succès !");
@@ -866,8 +895,8 @@
         function resetCache() {
             if(confirm("⚠️ Attention, cela va vider tout le découpage actuel. Pensez à exporter ! Continuer ?")) {
                 localStorage.removeItem('kinoDB_v2');
-                db = { projectName: "", sequences: [{ id: 1, info: "", modeTournage: false, tournageList: [{type:'plan', id:1}] }], plans: [{ seqId: 1, id: 1, impro: 0, info: "", temps: "" }], takes: [] };
-                openSeq = 1; openPlan = null; activeSeq = null; activePlan = null;
+                db = { projectName: "", sequences: [{ id: 1, info: "" }], plans: [{ seqId: 1, id: 1, impro: 0, info: "", temps: "" }], takes: [], tournageList: [{type: 'plan', seqId: 1, planId: 1}] };
+                openSeq = 1; openPlan = null; activeSeq = null; activePlan = null; viewMode = 'decoupage';
                 fileHandle = null; saveDataSilently(); renderApp();
             }
         }
