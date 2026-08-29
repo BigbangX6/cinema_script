@@ -217,14 +217,15 @@
                 </div>
                 <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
             </div>
-        </div>
-
-        <div class="right-panel">
-            <div class="mode-toggle">
+            
+            <!-- BOUTONS DE MODE DÉPLACÉS ICI -->
+            <div class="mode-toggle" style="flex-direction: column; margin-bottom: 0;">
                 <button id="btnModeDecoupage" class="mode-btn active" onclick="setViewMode('decoupage')">📖 Mode Découpage (Scénario)</button>
                 <button id="btnModeTournage" class="mode-btn" onclick="setViewMode('tournage')">🎥 Mode Plan de Travail (Global)</button>
             </div>
+        </div>
 
+        <div class="right-panel">
             <div id="accordionContainer">
                 <!-- Généré par JavaScript -->
             </div>
