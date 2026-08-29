@@ -123,10 +123,15 @@
         .tournage-list { display: flex; flex-direction: column; gap: 8px; }
         .tournage-item { display: flex; align-items: center; gap: 10px; background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; }
         .tournage-sep { background: #5a3c20; border-left: 4px solid #f5a623; }
-        .tournage-handle { cursor: ns-resize; opacity: 0.5; font-size: 1.2rem; }
-        .tournage-handle:hover { opacity: 1; }
         .take-badge { background: #7ed321; color: black; font-size: 0.8rem; font-weight: bold; padding: 3px 8px; border-radius: 12px; margin-left: auto; }
         
+        /* -- DRAG & DROP (POIGNEE) -- */
+        .drag-handle { cursor: grab; font-size: 1.8rem; padding-right: 15px; color: var(--text-muted); touch-action: none; user-select: none; }
+        .drag-handle:active { cursor: grabbing; color: #50e3c2; }
+        .tournage-item.dragging { opacity: 0.5; }
+        .tournage-item.drag-over { border-top: 3px solid #50e3c2; }
+        .placeholder { border: 2px dashed var(--border-input); background: transparent; border-radius: 8px; box-sizing: border-box; margin: 0; }
+
         .add-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-left: 15px; margin-top: 10px; }
         .btn-add { background: var(--bg-input); color: var(--text-main); border: 1px dashed var(--text-muted); padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; }
         .btn-add:hover { background: var(--border-color); }
@@ -484,11 +489,32 @@
                 db.tournageList.forEach((item, index) => {
                     const tItem = document.createElement('div');
                     tItem.className = `tournage-item ${item.type === 'sep' ? 'tournage-sep' : ''}`;
+                    tItem.setAttribute('data-index', index);
                     
+                    // --- DRAG & DROP HTML5 POUR ORDINATEUR ---
+                    tItem.draggable = true;
+                    tItem.ondragstart = (e) => { e.dataTransfer.setData('text/plain', index); tItem.classList.add('dragging'); };
+                    tItem.ondragover = (e) => { e.preventDefault(); tItem.classList.add('drag-over'); };
+                    tItem.ondragleave = (e) => { tItem.classList.remove('drag-over'); };
+                    tItem.ondrop = (e) => {
+                        e.preventDefault();
+                        tItem.classList.remove('drag-over');
+                        const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+                        if (!isNaN(fromIdx) && fromIdx !== index) {
+                            const movedItem = db.tournageList.splice(fromIdx, 1)[0];
+                            db.tournageList.splice(index, 0, movedItem);
+                            saveDataSilently(); renderApp(); writeToFileAPI(false);
+                        }
+                    };
+                    tItem.ondragend = () => { tItem.classList.remove('dragging'); };
+                    
+                    // --- DRAG & DROP TACTILE POUR MOBILE ---
                     const controls = `
-                        <div style="display:flex; flex-direction:column;">
-                            <span class="tournage-handle" onclick="moveGlobalTournageItem(${index}, -1)">▲</span>
-                            <span class="tournage-handle" onclick="moveGlobalTournageItem(${index}, 1)">▼</span>
+                        <div class="drag-handle" title="Glisser pour déplacer"
+                             ontouchstart="handleTouchStart(event, ${index})" 
+                             ontouchmove="handleTouchMove(event)" 
+                             ontouchend="handleTouchEnd(event)">
+                            ☰
                         </div>
                     `;
 
@@ -573,13 +599,6 @@
         }
 
         // --- GESTION DU PLAN DE TRAVAIL GLOBAL ---
-        function moveGlobalTournageItem(index, dir) {
-            if (index + dir < 0 || index + dir >= db.tournageList.length) return;
-            const temp = db.tournageList[index];
-            db.tournageList[index] = db.tournageList[index + dir];
-            db.tournageList[index + dir] = temp;
-            saveDataSilently(); renderApp(); writeToFileAPI(false);
-        }
         function updatePlanTemps(seqId, planId, val) { const p = db.plans.find(x => x.seqId === seqId && x.id === planId); if(p) { p.temps = val; saveDataSilently(); writeToFileAPI(false); } }
         function addGlobalSeparator() { db.tournageList.push({type: 'sep', text: ''}); saveDataSilently(); renderApp(); writeToFileAPI(false); }
         function updateGlobalSepText(index, val) { if(db.tournageList[index]) { db.tournageList[index].text = val; saveDataSilently(); writeToFileAPI(false); } }
@@ -913,6 +932,80 @@
                         console.error('Erreur Service Worker:', err);
                     });
             });
+        }
+
+        // --- GESTION DU DRAG & DROP MOBILE (TOUCH) ---
+        let draggedIndex = null;
+        let touchEl = null;
+        let placeholder = null;
+
+        function handleTouchStart(e, index) {
+            draggedIndex = index;
+            touchEl = e.target.closest('.tournage-item');
+            
+            const rect = touchEl.getBoundingClientRect();
+            
+            // Création d'un espace vide pour garder la mise en page
+            placeholder = document.createElement('div');
+            placeholder.className = 'tournage-item placeholder';
+            placeholder.style.height = rect.height + 'px';
+            touchEl.parentNode.insertBefore(placeholder, touchEl);
+            
+            // On décolle l'élément visuellement
+            touchEl.style.position = 'fixed';
+            touchEl.style.zIndex = '9999';
+            touchEl.style.width = rect.width + 'px';
+            touchEl.style.top = rect.top + 'px';
+            touchEl.style.left = rect.left + 'px';
+            touchEl.style.boxShadow = '0 10px 25px rgba(0,0,0,0.5)';
+            touchEl.style.pointerEvents = 'none'; // Permet de "voir" à travers
+            touchEl.style.transition = 'none';
+            
+            document.body.style.overflow = 'hidden'; // Bloque le scroll
+        }
+
+        function handleTouchMove(e) {
+            if(draggedIndex === null) return;
+            e.preventDefault(); 
+            const y = e.touches[0].clientY;
+            
+            // L'élément suit le doigt
+            touchEl.style.top = (y - (touchEl.offsetHeight / 2)) + 'px';
+            
+            // Trouve ce qui se trouve sous le doigt
+            const target = document.elementFromPoint(e.touches[0].clientX, y);
+            
+            if(target) {
+                const targetItem = target.closest('.tournage-item:not(.placeholder)');
+                document.querySelectorAll('.tournage-item').forEach(el => el.classList.remove('drag-over'));
+                if(targetItem) targetItem.classList.add('drag-over');
+            }
+        }
+
+        function handleTouchEnd(e) {
+            if(draggedIndex === null) return;
+            document.body.style.overflow = '';
+            
+            const y = e.changedTouches[0].clientY;
+            const target = document.elementFromPoint(e.changedTouches[0].clientX, y);
+            
+            if(target) {
+                const targetItem = target.closest('.tournage-item:not(.placeholder)');
+                if(targetItem) {
+                    const dropIndex = parseInt(targetItem.getAttribute('data-index'));
+                    if(!isNaN(dropIndex) && dropIndex !== draggedIndex) {
+                        const item = db.tournageList.splice(draggedIndex, 1)[0];
+                        db.tournageList.splice(dropIndex, 0, item);
+                        saveDataSilently();
+                        writeToFileAPI(false);
+                    }
+                }
+            }
+            
+            draggedIndex = null;
+            touchEl = null;
+            if(placeholder) { placeholder.remove(); placeholder = null; }
+            renderApp(); // Recharge la vue et nettoie tous les styles en ligne
         }
     </script>
 </body>
