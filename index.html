@@ -279,8 +279,6 @@
                     }
                 }
                 
-                const actorClapTime = timeCursor + 0.200;
-                this._playWoodClap(actorClapTime);
             }
             _playTransient(startTime) {
                 const clickOsc = this.audioCtx.createOscillator();
@@ -315,38 +313,6 @@
                 osc2.start(startTime);
                 osc1.stop(startTime + duration);
                 osc2.stop(startTime + duration);
-            }
-            _playWoodClap(startTime) {
-                const osc = this.audioCtx.createOscillator();
-                const oscGain = this.audioCtx.createGain();
-                osc.type = 'triangle';
-                osc.frequency.setValueAtTime(400, startTime);
-                osc.frequency.exponentialRampToValueAtTime(50, startTime + 0.1);
-                oscGain.gain.setValueAtTime(1, startTime);
-                oscGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.15);
-                osc.connect(oscGain);
-                oscGain.connect(this.audioCtx.destination);
-                osc.start(startTime);
-                osc.stop(startTime + 0.2);
-
-                const bufferSize = this.audioCtx.sampleRate * 0.2;
-                const buffer = this.audioCtx.createBuffer(1, bufferSize, this.audioCtx.sampleRate);
-                const data = buffer.getChannelData(0);
-                for (let i = 0; i < bufferSize; i++) {
-                    data[i] = Math.random() * 2 - 1;
-                }
-                const noiseSource = this.audioCtx.createBufferSource();
-                noiseSource.buffer = buffer;
-                const noiseFilter = this.audioCtx.createBiquadFilter();
-                noiseFilter.type = 'bandpass';
-                noiseFilter.frequency.value = 1000;
-                const noiseGain = this.audioCtx.createGain();
-                noiseGain.gain.setValueAtTime(1.5, startTime);
-                noiseGain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.08);
-                noiseSource.connect(noiseFilter);
-                noiseFilter.connect(noiseGain);
-                noiseGain.connect(this.audioCtx.destination);
-                noiseSource.start(startTime);
             }
         }
 
