@@ -275,13 +275,13 @@
                 
                 let timeCursor = now + 0.065;
                 const toneDuration = 0.080;
-                //const pauseDuration = 0.040;
-                const pauseDuration = 0.180;
+                const pauseDuration = 0.040;
                 for (let i = 0; i < payload.length; i++) {
                     const char = payload[i];
                     if (this.dtmfFreqs[char]) {
                         this._playDTMF(this.dtmfFreqs[char][0], this.dtmfFreqs[char][1], timeCursor, toneDuration);
                         timeCursor += toneDuration + pauseDuration;
+                        await sleep(120);
                     }
                 }
                 
