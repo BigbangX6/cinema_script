@@ -268,7 +268,7 @@
                 if (this.audioCtx.state === 'suspended') {
                     this.audioCtx.resume();
                 }
-                const payload = `*${scene}*${shot}*${take}#`;
+                const payload = `*${scene}*${shot}*${take}#*`;
                 const now = this.audioCtx.currentTime;
                 
                 this._playTransient(now);
