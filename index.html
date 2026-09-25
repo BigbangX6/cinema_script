@@ -261,7 +261,7 @@
                     '*': [10941, 12209], '0': [10941, 12336], '#': [10941, 12477]
                 };
             }
-            play(scene, shot, take) {
+            async play(scene, shot, take) {
                 if (!this.audioCtx) {
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
