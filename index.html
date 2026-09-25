@@ -261,7 +261,7 @@
                     '*': [10941, 12209], '0': [10941, 12336], '#': [10941, 12477]
                 };
             }
-            async play(scene, shot, take) {
+            play(scene, shot, take) {
                 if (!this.audioCtx) {
                     this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
                 }
@@ -274,14 +274,13 @@
                 this._playTransient(now);
                 
                 let timeCursor = now + 0.065;
-                const toneDuration = 0.080;
+                const toneDuration = 0.010;
                 const pauseDuration = 0.040;
                 for (let i = 0; i < payload.length; i++) {
                     const char = payload[i];
                     if (this.dtmfFreqs[char]) {
                         this._playDTMF(this.dtmfFreqs[char][0], this.dtmfFreqs[char][1], timeCursor, toneDuration);
                         timeCursor += toneDuration + pauseDuration;
-                        await sleep(120);
                     }
                 }
                 
