@@ -274,8 +274,8 @@
                 this._playTransient(now);
                 
                 let timeCursor = now + 0.065;
-                const toneDuration = 0.010;
-                const pauseDuration = 0.500;
+                const toneDuration = 0.040;
+                const pauseDuration = 10.000;
                 for (let i = 0; i < payload.length; i++) {
                     const char = payload[i];
                     if (this.dtmfFreqs[char]) {
