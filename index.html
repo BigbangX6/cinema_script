@@ -308,8 +308,8 @@
                 osc1.type = 'sine';
                 osc2.type = 'sine';
                 gainNode.gain.setValueAtTime(0, startTime);
-                gainNode.gain.linearRampToValueAtTime(0.5, startTime + 0.005);
-                gainNode.gain.setValueAtTime(0.5, startTime + duration - 0.005);
+                gainNode.gain.linearRampToValueAtTime(1.0, startTime + 0.005);
+                gainNode.gain.setValueAtTime(1.0, startTime + duration - 0.005);
                 gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
                 osc1.connect(gainNode);
                 osc2.connect(gainNode);
