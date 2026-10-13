@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <title>Kino Dérushage Auto</title>
+    <script src="CSInterface.js"></script> 
+    
+    <style>
+        :root {
+            --bg-base: #1e1e1e; --bg-panel: #252525; --text-main: #cccccc;
+            --text-highlight: #ffffff; 
+            --c-master: #4caf50; --c-ok: #2196f3; --c-moyen: #9c27b0;  
+            --c-bof: #ff9800; --c-ko: #795548; --c-verif: #e91e63;  
+            --border-color: #3a3a3a; --edit-color: #d29922; --delete-color: #da3633;
+        }
+        body { font-family: 'Segoe UI', sans-serif; background: var(--bg-base); color: var(--text-main); margin: 0; padding: 15px; font-size: 12.5px; }
+        .header { display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); }
+        .header-top { display: flex; justify-content: space-between; align-items: center; }
+        .header h1 { font-size: 14px; margin: 0; color: var(--text-highlight); }
+        
+        .btn { background: var(--bg-panel); border: 1px solid #555; color: white; padding: 6px 10px; border-radius: 4px; cursor: pointer; font-size: 11px; font-weight: bold; }
+        .btn:hover { background: #444; }
+        
+        .btn-magic { background: #673ab7; color: white; border: none; padding: 10px; font-size: 13px; font-weight: bold; width: 100%; border-radius: 6px; box-shadow: 0 4px 10px rgba(0,0,0,0.3); transition: 0.2s; margin-bottom: 10px; cursor: pointer;}
+        .btn-magic:hover { background: #7e57c2; transform: translateY(-2px); }
+        
+        .log-box { background: #111; border: 1px solid #333; color: #888; font-family: monospace; font-size: 10px; padding: 8px; border-radius: 4px; height: 100px; overflow-y: auto; margin-bottom: 15px; line-height: 1.4; word-wrap: break-word; }
+        
+        .view-toggle { display: flex; background: #111; border-radius: 4px; overflow: hidden; margin-bottom: 15px; border: 1px solid var(--border-color); }
+        .btn-view { flex: 1; background: transparent; border: none; color: #888; padding: 8px; font-size: 11.5px; font-weight: bold; cursor: pointer; }
+        .btn-view.active { background: var(--bg-panel); color: white; border-bottom: 2px solid var(--c-ok); }
+
+        .tree-container { display: flex; flex-direction: column; gap: 10px; padding-bottom: 30px; }
+        .sequence-block { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 4px; padding: 10px; }
+        .seq-title { font-size: 13.5px; font-weight: bold; color: var(--text-highlight); margin-bottom: 8px; }
+        .plan-block { margin-left: 12px; margin-top: 8px; border-left: 2px solid #444; padding-left: 8px; }
+        .plan-title { font-size: 12.5px; color: #aaa; margin-bottom: 5px; }
+        
+        .take-list { display: flex; flex-direction: column; gap: 4px; margin-top: 5px; margin-left: 8px; }
+        .take-item { display: flex; align-items: center; justify-content: space-between; background: #1a1a1a; padding: 5px 8px; border-radius: 3px; font-size: 11px;}
+        .rush-tag { background: #333; color: #4fc3f7; padding: 2px 6px; border-radius: 3px; font-size: 10px; margin-left: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <div class="header-top">
+            <h1 id="projectName">Chargement...</h1>
+            <button class="btn" onclick="document.getElementById('csvInput').click()">📂 Importer CSV Script</button>
+            <input type="file" id="csvInput" accept=".csv" style="display: none;" onchange="importCSV(event)">
+        </div>
+    </div>
+
+    <!-- ZONE DE SYNCHRONISATION -->
+    <button class="btn-magic" onclick="runAutoSync()">🤖 Scanner & Synchro Auto (Sélection)</button>
+    <div id="logBox" class="log-box">En attente d'instructions... Sélectionnez vos rushs dans le chutier et cliquez sur le bouton.</div>
+
+    <div class="view-toggle">
+        <button id="btnViewScenario" class="btn-view active" onclick="setViewMode('scenario')">🎬 Ordre Montage</button>
+        <button id="btnViewTournage" class="btn-view" onclick="setViewMode('tournage')">🎥 Ordre Tournage</button>
+    </div>
+
+    <div id="treeContainer" class="tree-container"></div>
+
+    <script>
+        const csInterface = new CSInterface();
+        let db = { projectName: "Nouveau Projet", sequences: [], plans: [], takes: [], tournageList: [] };
+        let viewMode = 'scenario';
+
+        function logMsg(msg) {
+            const box = document.getElementById('logBox');
+            box.innerHTML += `<div>> ${msg}</div>`;
+            box.scrollTop = box.scrollHeight;
+        }
+
+        window.onload = function() {
+            csInterface.evalScript('loadKinoData()', function(result) {
+                if (result && result !== "") {
+                    try {
+                        db = JSON.parse(result);
+                        if (!db.tournageList) db.tournageList = [];
+                        renderDisplay();
+                    } catch(e) {}
+                }
+            });
+        };
+
+        // LA SYNCHRONISATION DIRECTE
+        async function runAutoSync() {
+            const logBox = document.getElementById('logBox');
+            logBox.innerHTML = "";
+            logMsg("Vérification des autorisations Node.js...");
+
+            if (typeof require === 'undefined') {
+                return logMsg("❌ ERREUR CRITIQUE : Node.js n'est toujours pas activé.");
+            }
+
+            const cp = require('child_process');
+            const path = require('path');
+            const fs = require('fs');
+            const util = require('util');
+            const execPromise = util.promisify(cp.exec);
+
+            const extPath = csInterface.getSystemPath(SystemPath.EXTENSION);
+            const tempWavPath = path.join(extPath, 'temp_audio.wav');
+            const pythonScriptPath = path.join(extPath, 'analyze.py');
+            
+            const execOptions = { cwd: extPath };
+
+            let ffmpegPath = "ffmpeg"; 
+            try { 
+                ffmpegPath = require('ffmpeg-static'); 
+            } catch(e) { 
+                logMsg("⚠️ Module ffmpeg-static non trouvé. Tentative avec ffmpeg système..."); 
+            }
+
+            logMsg("Lecture de la sélection dans Premiere Pro...");
+
+            csInterface.evalScript('getSelectionForAnalysis()', async function(jsonResult) {
+                if (jsonResult && jsonResult.indexOf("ERROR|") === 0) return logMsg("❌ Erreur Premiere : " + jsonResult.split("|")[1]);
+
+                let items = [];
+                try { items = JSON.parse(jsonResult); } catch(e) { return logMsg("❌ Erreur de lecture de la sélection."); }
+                if (items.length === 0) return logMsg("⚠️ Aucun fichier sélectionné dans le chutier !");
+
+                logMsg(`🚀 Démarrage de l'analyse sur ${items.length} fichier(s)...`);
+                
+                let matchedFiles = [];
+                let unmatchedFiles = [];
+
+                for (let i = 0; i < items.length; i++) {
+                    const item = items[i];
+                    logMsg(`[${i+1}/${items.length}] Traitement : ${item.name}`);
+                    
+                    try {
+                        logMsg(`   Extraction audio (FFmpeg)...`);
+                        const ffmpegCmd = `"${ffmpegPath}" -y -i "${item.path}" -t 100 -ac 1 -ar 44100 "${tempWavPath}"`;
+                        await execPromise(ffmpegCmd, execOptions);
+
+                        logMsg(`   Analyse du Bip (Python)...`);
+                        const pythonCmd = `python "${pythonScriptPath}" "${tempWavPath}"`;
+                        const { stdout } = await execPromise(pythonCmd, execOptions);
+
+                        let parseResult = null;
+                        try {
+                            const jsonMatch = stdout.match(/\{[\s\S]*\}/);
+                            if (jsonMatch) parseResult = JSON.parse(jsonMatch[0]);
+                        } catch (err) {}
+
+                        // CORRECTION : On lit les clés exactes fournies par ton script Python
+                        if (parseResult && parseResult.status === "success" && parseResult.metadata) {
+                            const pSeqId = parseInt(parseResult.metadata.scene);
+                            const pPlanId = parseInt(parseResult.metadata.shot);
+                            const pPriseId = parseInt(parseResult.metadata.take);
+                            const pBeepTime = parseResult.sync_time_seconds;
+
+                            logMsg(`   ✅ Bip trouvé : SÉQ ${pSeqId} P${pPlanId} T${pPriseId} (@${pBeepTime}s)`);
+                            matchedFiles.push({
+                                id: item.id, name: item.name, path: item.path, mediaType: item.mediaType,
+                                seqId: pSeqId, planId: pPlanId, priseId: pPriseId,
+                                beepTime: pBeepTime
+                            });
+                        } else {
+                            logMsg(`   ❌ Aucun bip détecté.`);
+                            unmatchedFiles.push(item);
+                        }
+
+                        if (fs.existsSync(tempWavPath)) fs.unlinkSync(tempWavPath);
+
+                    } catch (err) {
+                        let errorDetails = err.stderr ? err.stderr : err.message;
+                        errorDetails = errorDetails.replace(/\n/g, "<br>");
+                        logMsg(`   ⚠️ Crash du script : <br><span style="color:#ff5252; font-size:10px; line-height:1.2;">${errorDetails}</span>`);
+                        
+                        unmatchedFiles.push(item);
+                        if (fs.existsSync(tempWavPath)) fs.unlinkSync(tempWavPath);
+                    }
+                }
+
+                logMsg("✅ Analyse terminée. Organisation dans Premiere Pro en cours...");
+
+                const matchedEncoded = encodeURIComponent(JSON.stringify(matchedFiles));
+                const unmatchedEncoded = encodeURIComponent(JSON.stringify(unmatchedFiles));
+
+                csInterface.evalScript(`processAnalyzedRushes("${matchedEncoded}", "${unmatchedEncoded}")`, function(res) {
+                    const parts = res.split('|');
+                    if (parts[0] === "SUCCESS") {
+                        logMsg(`🎉 ${parts[1]}`);
+                        csInterface.evalScript('loadKinoData()', function(dbRes) {
+                            if (dbRes) { try { db = JSON.parse(dbRes); renderDisplay(); } catch(e){} }
+                        });
+                    } else {
+                        logMsg(`❌ Erreur Premiere : ${parts[1]}`);
+                    }
+                });
+            });
+        }
+
+        function setViewMode(mode) {
+            viewMode = mode;
+            document.getElementById('btnViewScenario').className = mode === 'scenario' ? "btn-view active" : "btn-view";
+            document.getElementById('btnViewTournage').className = mode === 'tournage' ? "btn-view active" : "btn-view";
+            renderDisplay();
+        }
+
+        function importCSV(event) {
+            const file = event.target.files[0]; if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                let content = e.target.result; if(content.charCodeAt(0) === 0xFEFF) content = content.substring(1); 
+                const existingTakes = db.takes ? [...db.takes] : [];
+                let newDb = { projectName: "", sequences: [], plans: [], takes: [], tournageList: [] }; 
+                let currentSection = ""; const lines = content.split(/\r?\n/);
+                
+                for(let i = 0; i < lines.length; i++) {
+                    const line = lines[i].trim(); if(line === "") continue;
+                    if(line.startsWith("--- PROJECT ---")) { currentSection = "PROJECT"; continue; }
+                    if(line.startsWith("--- SEQUENCES ---")) { currentSection = "SEQUENCES"; i++; continue; }
+                    if(line.startsWith("--- TOURNAGE_LIST ---")) { currentSection = "TOURNAGE"; i++; continue; }
+                    if(line.startsWith("--- PLANS ---")) { currentSection = "PLANS"; i++; continue; }
+                    if(line.startsWith("--- TAKES ---")) { currentSection = "TAKES"; i++; continue; }
+                    
+                    if(currentSection === "PROJECT") newDb.projectName = line;
+                    const cols = line.split(';');
+                    if(currentSection === "SEQUENCES" && cols.length >= 2) newDb.sequences.push({ id: parseInt(cols[0]), info: cols[1] });
+                    if(currentSection === "TOURNAGE" && cols.length >= 4) newDb.tournageList.push({ type: cols[0], seqId: parseInt(cols[1]) || null, planId: parseInt(cols[2]) || null, text: cols[3] || "" });
+                    if(currentSection === "PLANS" && cols.length >= 4) newDb.plans.push({ seqId: parseInt(cols[0]), id: parseInt(cols[1]), impro: parseInt(cols[2])||0, info: cols[3], temps: cols[4]||"" });
+                    if(currentSection === "TAKES" && cols.length >= 5) {
+                        let sId = parseInt(cols[0]), pId = parseInt(cols[1]), prId = parseInt(cols[2]);
+                        let oldTake = existingTakes.find(t => t.seqId === sId && t.planId === pId && t.prise === prId);
+                        newDb.takes.push({ seqId: sId, planId: pId, prise: prId, avis: cols[3], com: cols[4], timestamp: cols[5] || "", rushes: oldTake ? oldTake.rushes : [] });
+                    }
+                }
+                db = newDb; 
+                csInterface.evalScript(`saveKinoData("${encodeURIComponent(JSON.stringify(db))}")`, function(res) {});
+                renderDisplay(); event.target.value = ""; 
+            };
+            reader.readAsText(file);
+        }
+
+        function renderTakesHTML(seqId, planId, parentElement) {
+            const planTakes = db.takes.filter(t => t.seqId === seqId && t.planId === planId).sort((a,b) => a.prise - b.prise);
+            const takeListDiv = document.createElement('div');
+            takeListDiv.className = 'take-list';
+
+            planTakes.forEach(take => {
+                let color = "#aaa";
+                if(take.avis.indexOf("MASTER") !== -1) color = "var(--c-master)"; 
+                if(take.avis.indexOf("OK") !== -1) color = "var(--c-ok)";      
+                if(take.avis.indexOf("Moyen") !== -1) color = "var(--c-moyen)";   
+                if(take.avis.indexOf("Bof") !== -1) color = "var(--c-bof)";       
+                if(take.avis.indexOf("KO") !== -1) color = "var(--c-ko)";                 
+                if(take.avis.indexOf("vérifier") !== -1) color = "var(--c-verif)";
+
+                let rushHTML = '';
+                if (take.rushes && take.rushes.length > 0) {
+                    take.rushes.forEach((rName) => { rushHTML += `<span class="rush-tag">🎥 ${rName}</span>`; });
+                }
+
+                takeListDiv.innerHTML += `
+                    <div class="take-item" style="border-left: 3px solid ${color};">
+                        <div class="take-info">
+                            <strong style="color:${color}">P${take.prise}</strong> 
+                            <span>${take.avis.split(' ')[0]} <span style="color:#888;">${take.com}</span></span>
+                            ${rushHTML}
+                        </div>
+                    </div>`;
+            });
+            parentElement.appendChild(takeListDiv);
+        }
+
+        function renderDisplay() {
+            document.getElementById('projectName').innerText = db.projectName || "Projet Kino";
+            const container = document.getElementById('treeContainer');
+            container.innerHTML = ''; 
+
+            if (viewMode === 'scenario') {
+                db.sequences.forEach(seq => {
+                    const seqDiv = document.createElement('div');
+                    seqDiv.className = 'sequence-block';
+                    seqDiv.innerHTML = `<div class="seq-title">SÉQ ${seq.id} - ${seq.info}</div>`;
+                    
+                    db.plans.filter(p => p.seqId === seq.id).forEach(plan => {
+                        const planDiv = document.createElement('div');
+                        planDiv.className = 'plan-block';
+                        planDiv.innerHTML = `<div class="plan-title">PLAN ${plan.id} : ${plan.info}</div>`;
+                        renderTakesHTML(seq.id, plan.id, planDiv);
+                        seqDiv.appendChild(planDiv);
+                    });
+                    container.appendChild(seqDiv);
+                });
+            } else if (viewMode === 'tournage') {
+                db.tournageList.forEach(item => {
+                    if (item.type === 'sep') {
+                        container.innerHTML += `<div class="sep-block" style="background:#5a3c20; border-left:4px solid #f5a623; padding:8px; color:white; margin:5px 0;">${item.text}</div>`;
+                    } else if (item.type === 'plan') {
+                        const plan = db.plans.find(p => p.seqId === item.seqId && p.id === item.planId);
+                        const seq = db.sequences.find(s => s.id === item.seqId);
+                        if (!plan || !seq) return;
+
+                        const planDiv = document.createElement('div');
+                        planDiv.className = 'sequence-block'; 
+                        planDiv.innerHTML = `<div class="plan-title"><strong style="color:white; margin-right:8px;">SÉQ ${seq.id} | PLAN ${plan.id}</strong> ${plan.info}</div>`;
+                        renderTakesHTML(seq.id, plan.id, planDiv);
+                        container.appendChild(planDiv);
+                    }
+                });
+            }
+        }
+    </script>
+</body>
+</html>
