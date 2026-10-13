@@ -1,0 +1,809 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cinema Script Maquettes</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout : en-tête + onglets de concepts ; chaque concept = scène (maquette) + colonne d'idées. Sombre d'abord (plateau peu éclairé). */
+:root {
+  --bg: #0f1113; --surface: #171a1d; --surface-2: #1c1f23; --raise: #23272c; --line: #30353b;
+  --fg: #eceef0; --muted: #8d959e; --accent: #4fd1b5; --on-accent: #06221c; --impro: #f0a13a;
+  --frame: #2a2e33; --stripe-a: #eceef0; --stripe-b: #0f1113;
+  --v-master: #f2c14a; --v-ok: #5cc77b; --v-moyen: #c8bb63; --v-bof: #e38b4c; --v-ko: #ec5a50; --v-check: #8d959e;
+  --f-display: "Barlow Condensed", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #eceeef; --surface: #ffffff; --surface-2: #f3f5f6; --raise: #f6f7f8; --line: #d5d9dc;
+    --fg: #14171a; --muted: #5a626a; --accent: #0f8a72; --on-accent: #ffffff; --impro: #b86200;
+    --frame: #1d2024; --stripe-a: #14171a; --stripe-b: #ffffff;
+    --v-master: #b88a0b; --v-ok: #23914a; --v-moyen: #8a7d1c; --v-bof: #b8611f; --v-ko: #c9362d; --v-check: #6b737b;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #eceeef; --surface: #ffffff; --surface-2: #f3f5f6; --raise: #f6f7f8; --line: #d5d9dc;
+  --fg: #14171a; --muted: #5a626a; --accent: #0f8a72; --on-accent: #ffffff; --impro: #b86200;
+  --frame: #1d2024; --stripe-a: #14171a; --stripe-b: #ffffff;
+  --v-master: #b88a0b; --v-ok: #23914a; --v-moyen: #8a7d1c; --v-bof: #b8611f; --v-ko: #c9362d; --v-check: #6b737b;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 15px; line-height: 1.5; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 28px; }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } }
+
+/* En-tête de page */
+.intro { display: grid; gap: 10px; max-width: 72ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-display); font-weight: 700; font-size: clamp(34px, 6vw, 52px); line-height: 1; margin: 0; letter-spacing: .01em; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); }
+.intro p strong { color: var(--fg); font-weight: 600; }
+
+.concept-tabs { display: flex; flex-wrap: wrap; gap: 8px; }
+.concept-tab { display: grid; gap: 2px; text-align: left; padding: 10px 16px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); min-width: 0; }
+.concept-tab b { font-family: var(--f-display); font-size: 20px; font-weight: 600; letter-spacing: .02em; }
+.concept-tab span { font-size: 12.5px; color: var(--muted); }
+.concept-tab[aria-selected="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.concept-tab[aria-selected="true"] b { color: var(--accent); }
+
+.stage { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 28px; align-items: start; }
+.stage.wide { grid-template-columns: minmax(0, 1fr); }
+@media (max-width: 980px) { .stage { grid-template-columns: minmax(0, 1fr); } }
+.stage-main { display: flex; justify-content: center; min-width: 0; }
+
+.ideas { display: grid; gap: 14px; min-width: 0; }
+.ideas h2 { font-family: var(--f-display); font-size: 26px; font-weight: 600; margin: 0; line-height: 1.1; }
+.ideas ul { margin: 0; padding-left: 18px; display: grid; gap: 8px; }
+.ideas li { color: var(--muted); }
+.ideas li strong { color: var(--fg); font-weight: 600; }
+.ideas .try { font-size: 13px; border: 1px dashed var(--line); border-radius: 8px; padding: 10px 12px; color: var(--muted); }
+.ideas.row { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 24px; }
+kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--raise); color: var(--fg); }
+
+/* ---------- Téléphone ---------- */
+.phone { width: 100%; max-width: 392px; height: 800px; border: 10px solid var(--frame); border-radius: 46px; overflow: hidden; display: flex; flex-direction: column; background: var(--bg); position: relative; box-shadow: 0 30px 60px -30px rgba(0,0,0,.6); }
+@media (max-width: 520px) { .phone { border-width: 1px; border-color: var(--line); border-radius: 18px; height: 760px; box-shadow: none; } }
+.ph-status { display: flex; justify-content: space-between; align-items: center; padding: 12px 18px 8px; font-size: 12.5px; color: var(--muted); flex: none; gap: 8px; }
+.ph-status .proj { color: var(--fg); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.sync { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--v-ok); }
+.ph-body { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 14px 16px; display: flex; flex-direction: column; gap: 12px; }
+.ph-body > * { flex: none; }
+.tabbar { flex: none; display: grid; grid-template-columns: repeat(3, 1fr); border-top: 1px solid var(--line); background: var(--surface); }
+.tabbar button { background: none; border: 0; padding: 10px 4px 14px; display: grid; justify-items: center; gap: 3px; font-size: 12px; color: var(--muted); }
+.tabbar button svg { width: 22px; height: 22px; }
+.tabbar button[aria-selected="true"] { color: var(--accent); }
+
+/* Ardoise (clap) */
+.slate { border-radius: 14px; overflow: hidden; background: var(--surface); border: 1px solid var(--line); }
+.stripes { height: 18px; background: repeating-linear-gradient(-55deg, var(--stripe-a) 0 16px, var(--stripe-b) 16px 32px); }
+.slate-grid { display: grid; grid-template-columns: 1fr 1fr 1.2fr; }
+.slate-grid > div { padding: 6px 12px 4px; border-right: 1px solid var(--line); display: grid; }
+.slate-grid > div:last-child { border-right: 0; }
+.slate-grid label { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .12em; color: var(--muted); }
+.slate-grid b { font-family: var(--f-display); font-weight: 700; font-size: 58px; line-height: .95; font-variant-numeric: tabular-nums; }
+.slate-grid .take b { color: var(--accent); }
+.slate-info { padding: 8px 12px 10px; border-top: 1px solid var(--line); display: grid; gap: 6px; }
+.slate-info p { margin: 0; font-size: 14px; }
+.slate-nav { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.slate-nav button { border: 1px solid var(--line); background: var(--raise); border-radius: 8px; padding: 4px 10px; font-size: 13px; }
+.tag-impro { display: inline-block; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; color: var(--impro); border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; vertical-align: 2px; }
+
+.btn-clap { width: 100%; border: 0; border-radius: 14px; background: var(--accent); color: var(--on-accent); padding: 14px 16px; display: grid; justify-items: center; gap: 0; }
+.btn-clap b { font-family: var(--f-display); font-size: 30px; letter-spacing: .06em; line-height: 1.05; }
+.btn-clap span { font-family: var(--f-mono); font-size: 11.5px; opacity: .8; }
+.btn-clap:active { transform: scale(.985); }
+.btn-clap.played { background: var(--raise); color: var(--fg); box-shadow: inset 0 0 0 2px var(--accent); }
+
+.sec-label { font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; }
+.verdicts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.verdict { --c: var(--v-check); border: 1px solid color-mix(in srgb, var(--c) 45%, transparent); background: color-mix(in srgb, var(--c) 14%, var(--surface)); border-radius: 12px; padding: 12px 6px; display: grid; justify-items: center; gap: 2px; font-weight: 600; font-size: 14px; }
+.verdict i { font-style: normal; font-size: 20px; line-height: 1.1; }
+.verdict kbd { margin-top: 2px; }
+.verdict.pulse { animation: pulse 1.4s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 35%, transparent); } }
+@media (prefers-reduced-motion: reduce) { .verdict.pulse { animation: none; } }
+.c-master { --c: var(--v-master); } .c-ok { --c: var(--v-ok); } .c-moyen { --c: var(--v-moyen); }
+.c-bof { --c: var(--v-bof); } .c-ko { --c: var(--v-ko); } .c-check { --c: var(--v-check); }
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { border: 1px solid var(--line); background: var(--raise); border-radius: 999px; padding: 4px 11px; font-size: 13px; }
+.note-card { border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; }
+.note-card input { width: 100%; border: 1px solid var(--line); background: var(--bg); color: var(--fg); border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 14px; }
+
+.takes { list-style: none; margin: 0; padding: 0; display: grid; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.take { display: grid; grid-template-columns: 38px auto 1fr auto; gap: 10px; align-items: center; padding: 8px 12px; border-top: 1px solid var(--line); font-size: 13.5px; }
+.take:first-child { border-top: 0; }
+.take .n { font-family: var(--f-display); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; }
+.take .com { color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.take time { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+.take.fresh { background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.pill { --c: var(--v-check); display: inline-flex; align-items: center; gap: 5px; font-size: 12.5px; font-weight: 600; color: var(--c); white-space: nowrap; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.empty { padding: 12px; color: var(--muted); font-size: 13.5px; }
+
+.next-up { display: grid; gap: 6px; }
+.next-btn { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: 12px; padding: 10px 12px; }
+.code { font-family: var(--f-display); font-weight: 700; font-size: 19px; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.next-btn .txt { font-size: 13.5px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Planning */
+.progress { display: grid; gap: 6px; }
+.bar { height: 6px; border-radius: 3px; background: var(--line); overflow: hidden; }
+.bar > i { display: block; height: 100%; background: var(--accent); }
+.day { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; padding: 10px 2px 2px; border-bottom: 2px solid var(--fg); }
+.day b { font-family: var(--f-display); font-size: 20px; font-weight: 600; letter-spacing: .02em; }
+.day span { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.prow { display: grid; grid-template-columns: 18px auto 1fr auto; gap: 10px; align-items: center; padding: 9px 4px; border-bottom: 1px solid var(--line); background: none; border-left: 0; border-right: 0; border-top: 0; text-align: left; width: 100%; }
+.prow .grip { color: var(--muted); font-size: 15px; letter-spacing: -2px; cursor: grab; }
+.prow .txt { min-width: 0; font-size: 13.5px; display: grid; }
+.prow .txt span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.prow .txt small { color: var(--muted); font-family: var(--f-mono); font-size: 11px; }
+.prow.cur { background: color-mix(in srgb, var(--accent) 10%, transparent); box-shadow: inset 3px 0 0 var(--accent); }
+.prow.impro .code { color: var(--impro); }
+.status { font-size: 11.5px; font-weight: 600; padding: 2px 8px; border-radius: 999px; white-space: nowrap; }
+.st-todo { color: var(--muted); border: 1px solid var(--line); }
+.st-wip { color: var(--v-moyen); background: color-mix(in srgb, var(--v-moyen) 15%, transparent); }
+.st-done { color: var(--v-ok); background: color-mix(in srgb, var(--v-ok) 15%, transparent); }
+
+/* Découpage (mobile) */
+.seqcard { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+.seqhead { width: 100%; display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; text-align: left; padding: 10px 12px; background: none; border: 0; }
+.seqhead .code { font-size: 24px; }
+.seqhead .txt { font-size: 13px; color: var(--muted); min-width: 0; }
+.seqhead .cnt { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.seqbody { border-top: 1px solid var(--line); padding: 4px 12px 12px; display: grid; gap: 2px; }
+.dplan { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px dashed var(--line); font-size: 13.5px; }
+.dplan .code { font-size: 17px; min-width: 34px; }
+.dplan.impro .code { color: var(--impro); }
+.dplan .dots { display: flex; gap: 3px; padding-top: 5px; }
+.dot { --c: var(--v-check); width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.addrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding-top: 10px; }
+.btn-add { border: 1px dashed var(--muted); background: none; border-radius: 10px; padding: 9px; font-size: 13.5px; font-weight: 600; }
+.btn-add.impro { border-color: var(--impro); color: var(--impro); }
+
+/* ---------- Poste PC ---------- */
+.desk { width: 100%; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--bg); display: grid; grid-template-rows: auto 1fr; min-height: 640px; }
+.d-top { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); background: var(--surface); flex-wrap: wrap; }
+.d-top .proj { font-family: var(--f-display); font-size: 22px; font-weight: 600; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; }
+.seg button { border: 0; background: none; padding: 6px 14px; font-size: 13.5px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--raise); color: var(--fg); font-weight: 600; box-shadow: inset 0 -2px 0 var(--accent); }
+.d-top .spacer { flex: 1; }
+.btn-ghost { border: 1px solid var(--line); background: var(--raise); border-radius: 8px; padding: 6px 12px; font-size: 13px; }
+.d-grid { display: grid; grid-template-columns: 220px minmax(0, 1fr) 340px; min-height: 0; }
+@media (max-width: 1100px) { .d-grid { grid-template-columns: 190px minmax(0, 1fr) 300px; } }
+@media (max-width: 860px) { .d-grid { grid-template-columns: minmax(0, 1fr); } }
+.d-col { padding: 14px; display: grid; gap: 10px; align-content: start; min-width: 0; }
+.d-col + .d-col { border-left: 1px solid var(--line); }
+@media (max-width: 860px) { .d-col + .d-col { border-left: 0; border-top: 1px solid var(--line); } }
+.seqitem { display: grid; gap: 5px; text-align: left; border: 1px solid transparent; background: none; border-radius: 10px; padding: 8px 10px; }
+.seqitem .hd { display: flex; justify-content: space-between; gap: 6px; align-items: baseline; }
+.seqitem .code { font-size: 20px; }
+.seqitem small { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.seqitem .cnt { font-family: var(--f-mono); font-size: 11px; color: var(--muted); }
+.seqitem[aria-current="true"] { background: var(--surface); border-color: var(--line); }
+.seqitem .bar { height: 4px; }
+.d-head { display: grid; gap: 4px; }
+.d-head h3 { margin: 0; font-family: var(--f-display); font-size: 26px; font-weight: 600; line-height: 1.1; }
+.d-head p { margin: 0; color: var(--muted); font-size: 13.5px; }
+.tbl-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+table.plans { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 480px; }
+table.plans th { text-align: left; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; font-weight: 500; text-transform: uppercase; color: var(--muted); padding: 8px 10px; border-bottom: 1px solid var(--line); }
+table.plans td { padding: 9px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
+table.plans tr:last-child td { border-bottom: 0; }
+table.plans tbody tr { cursor: pointer; }
+table.plans tbody tr:hover td { background: var(--raise); }
+table.plans tr.cur td { background: color-mix(in srgb, var(--accent) 10%, transparent); }
+table.plans tr.cur td:first-child { box-shadow: inset 3px 0 0 var(--accent); }
+table.plans tr.impro .code { color: var(--impro); }
+table.plans tr.sep td { background: var(--surface-2); font-family: var(--f-display); font-size: 17px; font-weight: 600; cursor: default; }
+table.plans tr.sep td span { font-family: var(--f-mono); font-size: 11px; color: var(--muted); font-weight: 500; margin-left: 8px; }
+td.num { font-family: var(--f-mono); font-size: 12px; color: var(--muted); white-space: nowrap; }
+.d-slate { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+.d-slate > div { padding: 4px 10px; border-right: 1px solid var(--line); display: grid; }
+.d-slate > div:last-child { border-right: 0; }
+.d-slate label { font-family: var(--f-mono); font-size: 10px; letter-spacing: .12em; color: var(--muted); }
+.d-slate b { font-family: var(--f-display); font-size: 44px; font-weight: 700; line-height: 1; font-variant-numeric: tabular-nums; }
+.d-slate .take b { color: var(--accent); }
+.d-col .btn-clap { padding: 10px; flex-direction: row; }
+.d-col .btn-clap b { font-size: 24px; }
+.d-col .verdict { padding: 8px 4px; font-size: 13px; }
+.d-col .verdict i { font-size: 17px; }
+.d-note { display: grid; gap: 4px; }
+.d-note input { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 8px; padding: 9px 10px; font: inherit; font-size: 14px; }
+.d-note small { color: var(--muted); font-size: 12px; }
+.d-keys { font-size: 12px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 6px 12px; }
+
+/* ---------- Ardoise caméra ---------- */
+.board { width: 100%; max-width: 392px; height: 800px; border: 10px solid var(--frame); border-radius: 46px; overflow: hidden; background: #050505; color: #f5f5f2; display: grid; grid-template-rows: auto auto 1fr auto; position: relative; box-shadow: 0 30px 60px -30px rgba(0,0,0,.6); }
+@media (max-width: 520px) { .board { border-width: 1px; border-radius: 18px; height: 740px; box-shadow: none; } }
+.board .stripes { height: 34px; background: repeating-linear-gradient(-55deg, #f5f5f2 0 22px, #050505 22px 44px); }
+.board-meta { display: flex; justify-content: space-between; gap: 8px; padding: 10px 18px; font-family: var(--f-mono); font-size: 12px; color: #a7a7a1; border-bottom: 1px solid #2b2b28; }
+.board-meta span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.board-tap { border: 0; background: none; color: inherit; display: grid; align-content: center; gap: 4px; padding: 10px 18px; text-align: left; }
+.board-row { display: grid; grid-template-columns: 92px 1fr; align-items: baseline; border-bottom: 1px solid #2b2b28; }
+.board-row label { font-family: var(--f-mono); font-size: 13px; letter-spacing: .14em; color: #a7a7a1; }
+.board-row b { font-family: var(--f-display); font-weight: 700; font-size: 128px; line-height: .95; font-variant-numeric: tabular-nums; }
+.board-row.take b { color: #fff27a; }
+.board-hint { font-family: var(--f-mono); font-size: 12px; color: #a7a7a1; padding-top: 8px; text-align: center; }
+.board-foot { padding: 10px 12px 16px; display: grid; gap: 8px; border-top: 1px solid #2b2b28; }
+.board-foot .verdicts { grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.board-foot .verdict { padding: 8px 2px; font-size: 10.5px; border-radius: 9px; color: #f5f5f2; background: #161614; border-color: #33332f; }
+.board-foot .verdict i { font-size: 18px; }
+.board-nav { display: flex; justify-content: space-between; gap: 8px; }
+.board-nav button { background: #161614; color: #f5f5f2; border: 1px solid #33332f; border-radius: 9px; padding: 7px 12px; font-size: 13px; }
+.flash { position: absolute; inset: 0; background: #fff; pointer-events: none; opacity: 0; }
+.flash.on { animation: flash .28s steps(1, end); }
+@keyframes flash { 0% { opacity: 1; } 60% { opacity: 1; } 100% { opacity: 0; } }
+
+/* Toast */
+.toast { position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); background: var(--fg); color: var(--bg); border-radius: 12px; padding: 10px 10px 10px 16px; display: flex; align-items: center; gap: 14px; font-size: 14px; font-weight: 500; box-shadow: 0 10px 30px rgba(0,0,0,.35); z-index: 10; max-width: calc(100% - 32px); }
+.toast button { background: none; border: 1px solid currentColor; color: inherit; border-radius: 8px; padding: 4px 10px; font-size: 13px; font-weight: 600; }
+
+.common { border-top: 1px solid var(--line); padding-top: 24px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Cinema Script · propositions d'interface</div>
+    <h1>Trois maquettes pour le plateau</h1>
+    <p>Mêmes données, même logique <strong>Séquence › Plan (prévu / impro) › Prise + clap audio</strong>. Les maquettes sont cliquables : jouez le clap, donnez un avis, changez de plan. Les données sont un exemple (« Les Heures Creuses ») et rien n'est enregistré.</p>
+  </header>
+
+  <nav class="concept-tabs" role="tablist" aria-label="Maquettes" id="conceptTabs"></nav>
+  <section id="stage"></section>
+
+  <section class="common">
+    <div class="ideas row">
+      <div class="ideas">
+        <h2>Principes communs</h2>
+        <ul>
+          <li><strong>Deux gestes par prise :</strong> Clap, puis un appui sur l'avis. L'avis enregistre la prise ; la note se tape après, sans bloquer.</li>
+          <li><strong>Le numéro de prise est toujours visible en grand</strong>, comme sur un vrai clap : c'est l'information qu'on vérifie le plus.</li>
+          <li><strong>Couleur = avis</strong> (Master, OK, Moyen, Bof, KO, À vérifier) partout : liste des prises, points du découpage, planning.</li>
+          <li><strong>Orange = impro</strong>, uniquement. Vert/turquoise = action principale. Le reste reste neutre.</li>
+          <li><strong>« Annuler »</strong> dans un bandeau plutôt qu'une fenêtre de confirmation pour une prise (plus rapide, et le clap reste juste).</li>
+        </ul>
+      </div>
+      <div class="ideas">
+        <h2>Statut d'un plan</h2>
+        <ul>
+          <li><strong>À tourner :</strong> aucune prise.</li>
+          <li><strong>En cours :</strong> des prises, mais aucune OK ni Master.</li>
+          <li><strong>Tourné :</strong> au moins une prise OK ou Master.</li>
+          <li>Calculé à partir des prises : <strong>aucun champ nouveau</strong> dans le fichier.</li>
+        </ul>
+      </div>
+      <div class="ideas">
+        <h2>Pour l'implémentation</h2>
+        <ul>
+          <li>Le format <code>sequences / plans / takes / tournageList</code> et les libellés d'avis <strong>ne changent pas</strong> : l'extension Premiere continue de fonctionner.</li>
+          <li><code>DigitalClapper</code> est repris tel quel (le clap de ces maquettes joue le vrai signal).</li>
+          <li>A et B peuvent coexister : même code, la mise en page change selon la largeur d'écran (A sous 860 px, B au-dessus).</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" hidden></div>
+
+<script>
+// --- CLAP AUDIO (copie exacte de l'original) ---
+class DigitalClapper {
+  constructor() {
+    this.audioCtx = null;
+    this.dtmfFreqs = {
+      '1': [10697, 12209], '2': [10697, 12336], '3': [10697, 12477],
+      '4': [10770, 12209], '5': [10770, 12336], '6': [10770, 12477],
+      '7': [10852, 12209], '8': [10852, 12336], '9': [10852, 12477],
+      '*': [10941, 12209], '0': [10941, 12336], '#': [10941, 12477]
+    };
+  }
+  play(scene, shot, take) {
+    if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+    const payload = `*${scene}*${shot}*${take}#*`;
+    const now = this.audioCtx.currentTime;
+    let timeCursor = now + 0.065;
+    const toneDuration = 0.080, pauseDuration = 0.120;
+    for (let i = 0; i < payload.length; i++) {
+      const f = this.dtmfFreqs[payload[i]];
+      if (f) { this._playDTMF(f[0], f[1], timeCursor, toneDuration); timeCursor += toneDuration + pauseDuration; }
+    }
+  }
+  _playDTMF(f1, f2, startTime, duration) {
+    const osc1 = this.audioCtx.createOscillator(), osc2 = this.audioCtx.createOscillator(), g = this.audioCtx.createGain();
+    osc1.frequency.value = f1; osc2.frequency.value = f2; osc1.type = 'sine'; osc2.type = 'sine';
+    g.gain.setValueAtTime(0, startTime);
+    g.gain.linearRampToValueAtTime(0.75, startTime + 0.005);
+    g.gain.setValueAtTime(0.75, startTime + duration - 0.005);
+    g.gain.linearRampToValueAtTime(0, startTime + duration);
+    osc1.connect(g); osc2.connect(g); g.connect(this.audioCtx.destination);
+    osc1.start(startTime); osc2.start(startTime); osc1.stop(startTime + duration); osc2.stop(startTime + duration);
+  }
+}
+const clapper = new DigitalClapper();
+
+// --- AVIS (libellés exacts du contrat avec l'extension) ---
+const AVIS = [
+  { label: "⭐ MASTER (Parfaite)", short: "Master", icon: "⭐", cls: "master" },
+  { label: "✅ OK (Bonne)", short: "OK", icon: "✅", cls: "ok" },
+  { label: "😐 Moyen", short: "Moyen", icon: "😐", cls: "moyen" },
+  { label: "😕 Bof", short: "Bof", icon: "😕", cls: "bof" },
+  { label: "❌ KO (Ratée)", short: "KO", icon: "❌", cls: "ko" },
+  { label: "❓ À vérifier", short: "À vérifier", icon: "❓", cls: "check" }
+];
+const avisOf = (label) => AVIS.find((a) => a.label === label) || AVIS[5];
+
+// --- DONNÉES D'EXEMPLE ---
+const iso = (h, m) => new Date(2026, 9, 14, h, m).toISOString();
+const S = {
+  sequences: [
+    { id: 1, info: "INT. CUISINE — JOUR · Léa, Marc · Petit-déjeuner tendu" },
+    { id: 2, info: "EXT. RUE DES ACACIAS — NUIT · Léa seule" },
+    { id: 3, info: "INT. VOITURE — NUIT · Léa, Marc · Retour de soirée" }
+  ],
+  plans: [
+    { seqId: 1, id: 1, impro: 0, info: "Plan large cuisine, Léa entre et pose son sac", temps: "20 min" },
+    { seqId: 1, id: 2, impro: 0, info: "Plan moyen Marc à table, lit le journal", temps: "15 min" },
+    { seqId: 1, id: 3, impro: 0, info: "Gros plan Léa ouvre le frigo, hésite", temps: "10 min" },
+    { seqId: 1, id: 4, impro: 0, info: "Insert main sur la tasse (raccord café)", temps: "5 min" },
+    { seqId: 1, id: 5, impro: 1, info: "Marc rit hors champ, contrechamp improvisé", temps: "10 min" },
+    { seqId: 2, id: 1, impro: 0, info: "Plan d'ensemble rue, Léa marche vers la caméra", temps: "25 min" },
+    { seqId: 2, id: 2, impro: 0, info: "Travelling latéral, Léa au téléphone", temps: "30 min" },
+    { seqId: 3, id: 1, impro: 0, info: "Champ Léa conductrice, pluie sur le pare-brise", temps: "20 min" },
+    { seqId: 3, id: 2, impro: 0, info: "Contrechamp Marc passager", temps: "20 min" }
+  ],
+  takes: [
+    { uid: "a1", seqId: 1, planId: 1, prise: 1, avis: "❌ KO (Ratée)", com: "Perche dans le champ", timestamp: iso(9, 12) },
+    { uid: "a2", seqId: 1, planId: 1, prise: 2, avis: "✅ OK (Bonne)", com: "", timestamp: iso(9, 16) },
+    { uid: "a3", seqId: 1, planId: 1, prise: 3, avis: "⭐ MASTER (Parfaite)", com: "Sac main gauche", timestamp: iso(9, 21) },
+    { uid: "a4", seqId: 1, planId: 2, prise: 1, avis: "😐 Moyen", com: "Jeu trop rapide", timestamp: iso(9, 48) },
+    { uid: "a5", seqId: 1, planId: 2, prise: 2, avis: "✅ OK (Bonne)", com: "Raccord journal page 3", timestamp: iso(9, 53) },
+    { uid: "a6", seqId: 1, planId: 3, prise: 1, avis: "😕 Bof", com: "Point flou en fin de plan", timestamp: iso(10, 21) },
+    { uid: "a7", seqId: 1, planId: 3, prise: 2, avis: "❌ KO (Ratée)", com: "", timestamp: iso(10, 25) },
+    { uid: "a8", seqId: 1, planId: 3, prise: 3, avis: "❓ À vérifier", com: "Avion pendant la réplique", timestamp: iso(10, 30) }
+  ],
+  tournageList: [
+    { type: "sep", text: "Mardi 14 · matin" },
+    { type: "plan", seqId: 1, planId: 1 }, { type: "plan", seqId: 1, planId: 2 }, { type: "plan", seqId: 1, planId: 3 },
+    { type: "plan", seqId: 1, planId: 4 }, { type: "plan", seqId: 1, planId: 5 },
+    { type: "sep", text: "Mardi 14 · après-midi" },
+    { type: "plan", seqId: 3, planId: 1 }, { type: "plan", seqId: 3, planId: 2 },
+    { type: "sep", text: "Mardi 14 · nuit" },
+    { type: "plan", seqId: 2, planId: 1 }, { type: "plan", seqId: 2, planId: 2 }
+  ]
+};
+
+// --- ÉTAT DE L'ÉCRAN ---
+const V = { concept: "A", aTab: "plateau", cur: { seqId: 1, planId: 3 }, clap: null, freshUid: null,
+  openSeq: 1, bSeq: 1, bView: "decoupage", note: "", undo: null };
+const CONCEPTS = [
+  { id: "A", name: "A · Plateau mobile", sub: "Téléphone, une main, 3 onglets" },
+  { id: "B", name: "B · Poste PC", sub: "3 colonnes + raccourcis clavier" },
+  { id: "C", name: "C · Ardoise caméra", sub: "Le téléphone devient le clap" }
+];
+
+// --- OUTILS ---
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const findPlan = (s, p) => S.plans.find((x) => x.seqId === s && x.id === p);
+const takesOf = (s, p) => S.takes.filter((t) => t.seqId === s && t.planId === p).sort((a, b) => a.prise - b.prise);
+const nextTake = (s, p) => takesOf(s, p).reduce((m, t) => Math.max(m, t.prise), 0) + 1;
+const hhmm = (isoStr) => new Date(isoStr).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const order = () => S.tournageList.filter((i) => i.type === "plan" && findPlan(i.seqId, i.planId));
+function status(p) {
+  const t = takesOf(p.seqId, p.id);
+  if (!t.length) return { k: "todo", label: "À tourner" };
+  if (t.some((x) => /MASTER|OK/.test(x.avis))) return { k: "done", label: "Tourné" };
+  return { k: "wip", label: "En cours" };
+}
+function minutes(str) {
+  const s = String(str || "").toLowerCase(), h = s.match(/(\d+)\s*h\s*(\d+)?/);
+  if (h) return +h[1] * 60 + (+h[2] || 0);
+  const m = s.match(/\d+/);
+  return m ? +m[0] : 0;
+}
+const fmtDur = (min) => min >= 60 ? Math.floor(min / 60) + " h " + String(min % 60).padStart(2, "0") : min + " min";
+const dots = (p) => takesOf(p.seqId, p.id).map((t) => `<span class="dot c-${avisOf(t.avis).cls}" title="Prise ${t.prise} · ${esc(avisOf(t.avis).short)}"></span>`).join("");
+const isCur = (s, p) => V.cur.seqId === s && V.cur.planId === p;
+const ICON = {
+  plateau: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="9" width="18" height="11" rx="1.5"/><path d="M3 9l2.5-5h15L18 9M8.5 4L6 9m8.5-5L12 9"/></svg>',
+  planning: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="3" y="5" width="18" height="16" rx="1.5"/><path d="M3 10h18M8 3v4M16 3v4M7 14h4M7 17h7"/></svg>',
+  decoupage: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 5h4M4 12h4M4 19h4M11 5h9M11 12h9M11 19h9"/></svg>'
+};
+
+// --- ACTIONS ---
+function playClap() {
+  const { seqId, planId } = V.cur;
+  const prise = nextTake(seqId, planId);
+  clapper.play(seqId, planId, prise);
+  V.clap = { seqId, planId, prise, at: new Date() };
+  render();
+}
+function saveTake(avisIdx) {
+  const { seqId, planId } = V.cur;
+  const a = AVIS[avisIdx];
+  const take = { uid: Date.now().toString(36), seqId, planId, prise: nextTake(seqId, planId), avis: a.label,
+    com: V.concept === "B" ? V.note.trim() : "", timestamp: new Date().toISOString() };
+  S.takes.push(take);
+  V.freshUid = take.uid; V.clap = null; V.note = "";
+  V.undo = take.uid;
+  showToast(`Prise ${take.prise} enregistrée · ${a.short}`, true);
+  render();
+}
+function undoTake() {
+  S.takes = S.takes.filter((t) => t.uid !== V.undo);
+  V.undo = null; V.freshUid = null;
+  hideToast(); render();
+}
+function goto(seqId, planId, tab) {
+  V.cur = { seqId, planId }; V.clap = null; V.freshUid = null;
+  if (tab) V.aTab = tab;
+  render();
+}
+function step(dir) {
+  const list = V.concept === "B" && V.bView === "decoupage"
+    ? S.plans.filter((p) => p.seqId === V.bSeq).sort((a, b) => a.id - b.id).map((p) => ({ seqId: p.seqId, planId: p.id }))
+    : order();
+  const i = list.findIndex((x) => isCur(x.seqId, x.planId));
+  const n = list[Math.min(list.length - 1, Math.max(0, i + dir))];
+  if (n) goto(n.seqId, n.planId);
+}
+function addPlan(seqId, impro) {
+  const own = S.plans.filter((p) => p.seqId === seqId);
+  const id = own.length ? Math.max(...own.map((p) => p.id)) + 1 : 1;
+  S.plans.push({ seqId, id, impro, info: impro ? "Plan impro (à décrire)" : "Nouveau plan (à décrire)", temps: "" });
+  // L'impro s'insère juste après le plan en cours dans le planning : on le tourne maintenant
+  const idx = S.tournageList.findIndex((i) => i.type === "plan" && isCur(i.seqId, i.planId));
+  const item = { type: "plan", seqId, planId: id };
+  if (impro && idx !== -1) S.tournageList.splice(idx + 1, 0, item); else S.tournageList.push(item);
+  if (impro) { V.cur = { seqId, planId: id }; V.clap = null; }
+  showToast(impro ? `Impro ${seqId}·${id} créée et sélectionnée` : `Plan ${seqId}·${id} ajouté`, false);
+  render();
+}
+function addToNote(text) {
+  const t = S.takes.find((x) => x.uid === V.freshUid);
+  if (!t) return;
+  t.com = t.com ? t.com + ", " + text.toLowerCase() : text;
+  render();
+}
+
+let toastTimer;
+function showToast(msg, withUndo) {
+  const el = document.getElementById("toast");
+  el.innerHTML = `<span>${esc(msg)}</span>` + (withUndo ? `<button type="button" data-act="undo">Annuler</button>` : "");
+  el.hidden = false;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(hideToast, 5000);
+}
+function hideToast() { document.getElementById("toast").hidden = true; V.undo = null; }
+
+// --- RENDU COMMUN ---
+function takeList(seqId, planId, limit) {
+  const t = takesOf(seqId, planId).reverse().slice(0, limit || 99);
+  if (!t.length) return `<div class="takes"><div class="empty">Aucune prise. Prêt à tourner.</div></div>`;
+  return `<ol class="takes">${t.map((x) => {
+    const a = avisOf(x.avis);
+    return `<li class="take${x.uid === V.freshUid ? " fresh" : ""}"><span class="n">${x.prise}</span>
+      <span class="pill c-${a.cls}">${esc(a.short)}</span><span class="com">${esc(x.com) || "—"}</span><time>${hhmm(x.timestamp)}</time></li>`;
+  }).join("")}</ol>`;
+}
+function verdictButtons(withKeys, pulse) {
+  return `<div class="verdicts">${AVIS.map((a, i) => `<button type="button" class="verdict c-${a.cls}${pulse ? " pulse" : ""}" data-act="avis" data-i="${i}">
+    <i aria-hidden="true">${a.icon}</i>${esc(a.short)}${withKeys ? `<kbd>${i + 1}</kbd>` : ""}</button>`).join("")}</div>`;
+}
+function clapButton() {
+  const { seqId, planId } = V.cur, n = nextTake(seqId, planId);
+  const played = V.clap && V.clap.seqId === seqId && V.clap.planId === planId;
+  return `<button type="button" class="btn-clap${played ? " played" : ""}" data-act="clap">
+    <b>${played ? "Rejouer le clap" : "Clap · prise " + n}</b>
+    <span>${played ? "Joué à " + V.clap.at.toLocaleTimeString("fr-FR") + " · donnez l'avis à « coupez »" : "joue *" + seqId + "*" + planId + "*" + n + "#*"}</span></button>`;
+}
+
+// --- A · PLATEAU MOBILE ---
+function renderA() {
+  const tab = V.aTab;
+  const body = tab === "plateau" ? aPlateau() : tab === "planning" ? aPlanning() : aDecoupage();
+  return `<div class="stage">
+    <div class="stage-main"><div class="phone">
+      <div class="ph-status"><span class="proj">Les Heures Creuses</span><span class="sync">Drive</span></div>
+      <div class="ph-body">${body}</div>
+      <nav class="tabbar" role="tablist">
+        ${[["plateau", "Plateau"], ["planning", "Planning"], ["decoupage", "Découpage"]].map(([k, l]) =>
+          `<button type="button" role="tab" aria-selected="${tab === k}" data-act="atab" data-tab="${k}">${ICON[k]}${l}</button>`).join("")}
+      </nav>
+    </div></div>
+    <aside class="ideas">
+      <h2>Tout le plateau sur un écran</h2>
+      <ul>
+        <li><strong>L'ardoise en haut</strong> : SÉQ / PLAN / PRISE en très gros, lisible à bout de bras.</li>
+        <li><strong>Clap, puis un appui sur l'avis = prise enregistrée.</strong> Plus de menu déroulant ni de bouton « Enregistrer » séparé.</li>
+        <li><strong>Note après coup</strong> : la dernière prise reste ouverte avec des raccourcis (Raccord, Son, Point…).</li>
+        <li><strong>‹ ›</strong> passent au plan précédent / suivant <em>dans l'ordre du planning</em>. « Ensuite » montre les deux plans à venir.</li>
+        <li><strong>+ Impro</strong> sur le plateau crée le plan, l'insère juste après le plan en cours dans le planning et le sélectionne.</li>
+        <li><strong>Barre d'onglets en bas</strong>, à portée de pouce : Plateau, Planning, Découpage.</li>
+      </ul>
+      <p class="try">À essayer : Clap, puis « OK ». Ensuite touchez « Son » pour annoter la prise, ou « Annuler » dans le bandeau.</p>
+    </aside>
+  </div>`;
+}
+function aPlateau() {
+  const { seqId, planId } = V.cur, p = findPlan(seqId, planId), n = nextTake(seqId, planId);
+  const list = order(), i = list.findIndex((x) => isCur(x.seqId, x.planId));
+  const upcoming = list.slice(i + 1, i + 3).map((x) => findPlan(x.seqId, x.planId));
+  const played = V.clap && isCur(V.clap.seqId, V.clap.planId);
+  const fresh = S.takes.find((t) => t.uid === V.freshUid && isCur(t.seqId, t.planId));
+  return `
+    <section class="slate" aria-label="Plan en cours">
+      <div class="stripes"></div>
+      <div class="slate-grid">
+        <div><label>SÉQ</label><b>${seqId}</b></div>
+        <div><label>PLAN</label><b>${planId}</b></div>
+        <div class="take"><label>PRISE</label><b>${n}</b></div>
+      </div>
+      <div class="slate-info">
+        <p>${p.impro ? '<span class="tag-impro">IMPRO</span> ' : ""}${esc(p.info)}</p>
+        <div class="slate-nav">
+          <button type="button" data-act="step" data-d="-1" aria-label="Plan précédent">‹</button>
+          <span>${i + 1} / ${list.length} au planning · ${esc(p.temps || "—")}</span>
+          <button type="button" data-act="step" data-d="1" aria-label="Plan suivant">›</button>
+        </div>
+      </div>
+    </section>
+    ${clapButton()}
+    <div class="sec-label"><span>Avis · enregistre la prise ${n}</span></div>
+    ${verdictButtons(false, played)}
+    ${fresh ? `<div class="note-card">
+      <div class="sec-label"><span>Note prise ${fresh.prise}</span><span>${esc(avisOf(fresh.avis).short)}</span></div>
+      <div class="chips">${["Raccord", "Son", "Point", "Jeu", "Cadre", "Lumière"].map((c) => `<button type="button" class="chip" data-act="chip" data-t="${c}">+ ${c}</button>`).join("")}</div>
+      <input id="aNote" type="text" placeholder="Note libre…" value="${esc(fresh.com)}" data-act="freshcom">
+    </div>` : ""}
+    <div class="sec-label"><span>Prises de ce plan</span><span>${takesOf(seqId, planId).length}</span></div>
+    ${takeList(seqId, planId, 5)}
+    <div class="next-up">
+      <div class="sec-label"><span>Ensuite</span><button type="button" class="chip" data-act="addplan" data-seq="${seqId}" data-impro="1" style="color:var(--impro);border-color:var(--impro)">+ Impro</button></div>
+      ${upcoming.length ? upcoming.map((u) => `<button type="button" class="next-btn" data-act="goto" data-seq="${u.seqId}" data-plan="${u.id}">
+        <span class="code"${u.impro ? ' style="color:var(--impro)"' : ""}>${u.seqId}·${u.id}</span><span class="txt">${esc(u.info)}</span><span aria-hidden="true">›</span></button>`).join("")
+        : `<div class="empty">Dernier plan du planning.</div>`}
+    </div>`;
+}
+function planningRows(compact) {
+  let out = "", group = null;
+  const groups = [];
+  S.tournageList.forEach((i) => {
+    if (i.type === "sep") { group = { sep: i, items: [] }; groups.push(group); return; }
+    const p = findPlan(i.seqId, i.planId);
+    if (!p) return;
+    if (!group) { group = { sep: null, items: [] }; groups.push(group); }
+    group.items.push(p);
+  });
+  groups.forEach((g) => {
+    const total = g.items.reduce((m, p) => m + minutes(p.temps), 0);
+    const done = g.items.filter((p) => status(p).k === "done").length;
+    if (g.sep) out += `<div class="day"><b>${esc(g.sep.text)}</b><span>${done}/${g.items.length} · ${fmtDur(total)}</span></div>`;
+    g.items.forEach((p) => {
+      const st = status(p);
+      out += `<button type="button" class="prow${isCur(p.seqId, p.id) ? " cur" : ""}${p.impro ? " impro" : ""}" data-act="goto" data-seq="${p.seqId}" data-plan="${p.id}" data-tab="plateau">
+        <span class="grip" aria-hidden="true">⋮⋮</span><span class="code">${p.seqId}·${p.id}</span>
+        <span class="txt"><span>${esc(p.info)}</span><small>${esc(p.temps || "—")} · ${takesOf(p.seqId, p.id).length} prise(s)</small></span>
+        <span class="status st-${st.k}">${st.label}</span></button>`;
+    });
+  });
+  return out;
+}
+function aPlanning() {
+  const all = order().map((x) => findPlan(x.seqId, x.planId));
+  const done = all.filter((p) => status(p).k === "done").length;
+  return `<div class="progress"><div class="sec-label"><span>Journée</span><span>${done} / ${all.length} plans tournés</span></div>
+    <div class="bar"><i style="width:${Math.round(done / all.length * 100)}%"></i></div></div>
+    <div>${planningRows()}</div>
+    <button type="button" class="btn-add">+ Séparateur</button>`;
+}
+function aDecoupage() {
+  return S.sequences.map((s) => {
+    const plans = S.plans.filter((p) => p.seqId === s.id).sort((a, b) => a.id - b.id);
+    const done = plans.filter((p) => status(p).k === "done").length;
+    const open = V.openSeq === s.id;
+    return `<div class="seqcard">
+      <button type="button" class="seqhead" data-act="openseq" data-seq="${s.id}" aria-expanded="${open}">
+        <span class="code">${s.id}</span><span class="txt">${esc(s.info)}</span><span class="cnt">${done}/${plans.length} ${open ? "▾" : "▸"}</span></button>
+      ${open ? `<div class="seqbody">${plans.map((p) => `<div class="dplan${p.impro ? " impro" : ""}">
+          <span class="code">${p.id}</span><span>${esc(p.info)}</span><span class="dots">${dots(p)}</span></div>`).join("")}
+        <div class="addrow"><button type="button" class="btn-add" data-act="addplan" data-seq="${s.id}" data-impro="0">+ Plan prévu</button>
+        <button type="button" class="btn-add impro" data-act="addplan" data-seq="${s.id}" data-impro="1">+ Plan impro</button></div></div>` : ""}
+    </div>`;
+  }).join("") + `<button type="button" class="btn-add">+ Nouvelle séquence</button>`;
+}
+
+// --- B · POSTE PC ---
+function renderB() {
+  const { seqId, planId } = V.cur, n = nextTake(seqId, planId), p = findPlan(seqId, planId);
+  const seq = S.sequences.find((s) => s.id === V.bSeq);
+  const plans = S.plans.filter((x) => x.seqId === V.bSeq).sort((a, b) => a.id - b.id);
+  const played = V.clap && isCur(V.clap.seqId, V.clap.planId);
+  const row = (x, showSeq) => {
+    const st = status(x);
+    return `<tr class="${isCur(x.seqId, x.id) ? "cur" : ""}${x.impro ? " impro" : ""}" data-act="goto" data-seq="${x.seqId}" data-plan="${x.id}">
+      <td><span class="code">${showSeq ? x.seqId + "·" : ""}${x.id}</span></td>
+      <td>${x.impro ? '<span class="tag-impro">IMPRO</span> ' : ""}${esc(x.info)}</td>
+      <td class="num">${esc(x.temps || "—")}</td>
+      <td><span class="dots" style="display:flex;gap:3px;padding-top:4px">${dots(x) || '<span class="num">—</span>'}</span></td>
+      <td><span class="status st-${st.k}">${st.label}</span></td></tr>`;
+  };
+  let middle;
+  if (V.bView === "decoupage") {
+    middle = `<div class="d-head"><h3>Séquence ${seq.id}</h3><p>${esc(seq.info)}</p></div>
+      <div class="tbl-wrap"><table class="plans"><thead><tr><th>Plan</th><th>Découpage technique</th><th>Temps</th><th>Prises</th><th>Statut</th></tr></thead>
+      <tbody>${plans.map((x) => row(x, false)).join("")}</tbody></table></div>
+      <div class="addrow" style="max-width:420px"><button type="button" class="btn-add" data-act="addplan" data-seq="${seq.id}" data-impro="0">+ Plan prévu</button>
+      <button type="button" class="btn-add impro" data-act="addplan" data-seq="${seq.id}" data-impro="1">+ Plan impro</button></div>`;
+  } else {
+    let rows = "";
+    S.tournageList.forEach((i, k) => {
+      if (i.type === "sep") {
+        const items = [];
+        for (let j = k + 1; j < S.tournageList.length && S.tournageList[j].type !== "sep"; j++) { const q = findPlan(S.tournageList[j].seqId, S.tournageList[j].planId); if (q) items.push(q); }
+        rows += `<tr class="sep"><td colspan="5">${esc(i.text)}<span>${items.length} plans · ${fmtDur(items.reduce((m, q) => m + minutes(q.temps), 0))}</span></td></tr>`;
+      } else { const q = findPlan(i.seqId, i.planId); if (q) rows += row(q, true); }
+    });
+    middle = `<div class="d-head"><h3>Plan de travail</h3><p>Ordre de tournage. Glisser une ligne pour la déplacer ; les totaux par demi-journée se recalculent.</p></div>
+      <div class="tbl-wrap"><table class="plans"><thead><tr><th>Plan</th><th>Découpage technique</th><th>Temps</th><th>Prises</th><th>Statut</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+  }
+  return `<div class="stage wide">
+    <div class="stage-main"><div class="desk">
+      <div class="d-top">
+        <span class="proj">Les Heures Creuses</span><span class="sync">Enregistré sur Drive</span>
+        <span class="spacer"></span>
+        <div class="seg" role="group" aria-label="Vue">
+          <button type="button" aria-pressed="${V.bView === "decoupage"}" data-act="bview" data-v="decoupage">Découpage</button>
+          <button type="button" aria-pressed="${V.bView === "tournage"}" data-act="bview" data-v="tournage">Plan de travail</button>
+        </div>
+        <button type="button" class="btn-ghost">PDF ▾</button>
+      </div>
+      <div class="d-grid">
+        <div class="d-col">
+          <div class="sec-label"><span>Séquences</span></div>
+          ${S.sequences.map((s) => {
+            const ps = S.plans.filter((x) => x.seqId === s.id), d = ps.filter((x) => status(x).k === "done").length;
+            return `<button type="button" class="seqitem" aria-current="${V.bView === "decoupage" && V.bSeq === s.id}" data-act="bseq" data-seq="${s.id}">
+              <span class="hd"><span class="code">SÉQ ${s.id}</span><span class="cnt">${d}/${ps.length}</span></span>
+              <small>${esc(s.info)}</small><span class="bar"><i style="width:${ps.length ? Math.round(d / ps.length * 100) : 0}%"></i></span></button>`;
+          }).join("")}
+          <button type="button" class="btn-add">+ Séquence</button>
+        </div>
+        <div class="d-col">${middle}</div>
+        <div class="d-col">
+          <div class="sec-label"><span>Prise en cours</span><span>${p.impro ? '<span class="tag-impro">IMPRO</span>' : ""}</span></div>
+          <div class="d-slate"><div><label>SÉQ</label><b>${seqId}</b></div><div><label>PLAN</label><b>${planId}</b></div><div class="take"><label>PRISE</label><b>${n}</b></div></div>
+          <p style="margin:0;font-size:13.5px;color:var(--muted)">${esc(p.info)}</p>
+          ${clapButton().replace("</b>", " <kbd>Espace</kbd></b>")}
+          <div class="d-note"><input id="bNote" type="text" placeholder="Note pour la prise ${n} (facultatif)" value="${esc(V.note)}" data-act="bnote">
+            <small>Tapez la note pendant la prise, l'avis l'enregistre avec.</small></div>
+          ${verdictButtons(true, played)}
+          <div class="sec-label"><span>Prises · ${seqId}·${planId}</span><span>${takesOf(seqId, planId).length}</span></div>
+          ${takeList(seqId, planId)}
+          <div class="d-keys"><span><kbd>Espace</kbd> clap</span><span><kbd>1</kbd>–<kbd>6</kbd> avis</span><span><kbd>↑</kbd><kbd>↓</kbd> plan</span><span><kbd>N</kbd> note</span></div>
+        </div>
+      </div>
+    </div></div>
+    <aside class="ideas row">
+      <div class="ideas"><h2>Le bureau de la scripte</h2>
+        <ul>
+          <li><strong>Trois colonnes fixes</strong> : séquences à gauche, plans au centre, prise en cours à droite. Plus d'accordéon qui fait sauter la page.</li>
+          <li><strong>Le panneau de prise ne bouge jamais</strong> : il suit le plan sélectionné, dans le découpage comme dans le plan de travail.</li>
+        </ul></div>
+      <div class="ideas"><h2>Lecture en un coup d'œil</h2>
+        <ul>
+          <li><strong>Points de couleur</strong> par prise dans le tableau : on voit tout de suite ce qui reste à refaire.</li>
+          <li><strong>Avancement par séquence</strong> (barre et compteur) et <strong>totaux par demi-journée</strong> dans le plan de travail.</li>
+        </ul></div>
+      <div class="ideas"><h2>Clavier</h2>
+        <ul>
+          <li><kbd>Espace</kbd> clap, <kbd>1</kbd>–<kbd>6</kbd> avis, <kbd>↑</kbd> <kbd>↓</kbd> plan, <kbd>N</kbd> note. La souris devient facultative.</li>
+          <li>Sous 860 px de large, cette vue laisse la place à la maquette A.</li>
+        </ul></div>
+    </aside>
+  </div>`;
+}
+
+// --- C · ARDOISE CAMÉRA ---
+function renderC() {
+  const { seqId, planId } = V.cur, n = nextTake(seqId, planId);
+  const played = V.clap && isCur(V.clap.seqId, V.clap.planId);
+  const today = new Date(2026, 9, 14).toLocaleDateString("fr-FR");
+  return `<div class="stage">
+    <div class="stage-main"><div class="board">
+      <div class="stripes"></div>
+      <div class="board-meta"><span>LES HEURES CREUSES</span><span>${today}</span></div>
+      <button type="button" class="board-tap" data-act="clap" aria-label="Clapper">
+        <div class="board-row"><label>SÉQ</label><b>${seqId}</b></div>
+        <div class="board-row"><label>PLAN</label><b>${planId}</b></div>
+        <div class="board-row take"><label>PRISE</label><b>${n}</b></div>
+        <div class="board-hint">${played ? "Clap joué à " + V.clap.at.toLocaleTimeString("fr-FR") + " · avis en bas" : "Toucher l'ardoise pour clapper (son + flash)"}</div>
+      </button>
+      <div class="board-foot">
+        ${verdictButtons(false, played)}
+        <div class="board-nav"><button type="button" data-act="step" data-d="-1">‹ Plan préc.</button><button type="button" data-act="concept" data-c="A">Liste</button><button type="button" data-act="step" data-d="1">Plan suiv. ›</button></div>
+      </div>
+      <div class="flash" id="flash"></div>
+    </div></div>
+    <aside class="ideas">
+      <h2>Le téléphone devient le clap</h2>
+      <ul>
+        <li><strong>Plein écran noir, chiffres géants</strong> : on filme l'écran devant la caméra comme une vraie ardoise. Lisible aussi dans les rushes.</li>
+        <li><strong>Toucher n'importe où sur l'ardoise = clap</strong> : le signal audio part et l'écran <strong>flashe en blanc</strong>. Ce flash donne un repère de synchro visuel de secours.</li>
+        <li><strong>Avis en bas, petits</strong> : on les touche après « coupez », sans quitter l'écran.</li>
+        <li>Toujours en sombre, même en mode clair : moins d'éblouissement sur le plateau, meilleur contraste à l'image.</li>
+        <li>Idée bonus : <strong>garder l'écran allumé</strong> (Wake Lock) tant que cet écran est ouvert.</li>
+      </ul>
+      <p class="try">Pratique quand la scripte et la personne au clap sont deux personnes : un appareil en mode A (lecture/écriture), l'autre en mode C.</p>
+    </aside>
+  </div>`;
+}
+
+// --- RENDU GLOBAL ---
+function render() {
+  document.getElementById("conceptTabs").innerHTML = CONCEPTS.map((c) =>
+    `<button type="button" role="tab" class="concept-tab" aria-selected="${V.concept === c.id}" data-act="concept" data-c="${c.id}"><b>${c.name}</b><span>${c.sub}</span></button>`).join("");
+  const active = document.activeElement && document.activeElement.id;
+  document.getElementById("stage").innerHTML = V.concept === "A" ? renderA() : V.concept === "B" ? renderB() : renderC();
+  if (active === "bNote" || active === "aNote") { const f = document.getElementById(active); if (f) { f.focus(); f.setSelectionRange(f.value.length, f.value.length); } }
+}
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b || b.tagName === "INPUT") return;
+  const d = b.dataset;
+  switch (d.act) {
+    case "concept": V.concept = d.c; V.clap = null; render(); break;
+    case "atab": V.aTab = d.tab; render(); break;
+    case "clap":
+      playClap();
+      if (V.concept === "C") { const f = document.getElementById("flash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on"); }
+      break;
+    case "avis": saveTake(+d.i); break;
+    case "undo": undoTake(); break;
+    case "step": step(+d.d); break;
+    case "goto": goto(+d.seq, +d.plan, d.tab); break;
+    case "openseq": V.openSeq = V.openSeq === +d.seq ? null : +d.seq; render(); break;
+    case "addplan": addPlan(+d.seq, +d.impro); break;
+    case "chip": addToNote(d.t); break;
+    case "bseq": V.bSeq = +d.seq; V.bView = "decoupage"; render(); break;
+    case "bview": V.bView = d.v; render(); break;
+  }
+});
+document.addEventListener("input", (e) => {
+  if (e.target.dataset.act === "bnote") V.note = e.target.value;
+  if (e.target.dataset.act === "freshcom") { const t = S.takes.find((x) => x.uid === V.freshUid); if (t) t.com = e.target.value; }
+});
+document.addEventListener("change", (e) => { if (e.target.dataset.act === "freshcom") render(); });
+document.addEventListener("keydown", (e) => {
+  if (V.concept !== "B" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const typing = e.target.tagName === "INPUT";
+  if (typing) { if (e.key === "Escape") e.target.blur(); else if (e.key === "Enter") { e.target.blur(); } return; }
+  if (e.code === "Space") { e.preventDefault(); playClap(); }
+  else if (/^[1-6]$/.test(e.key)) { saveTake(+e.key - 1); }
+  else if (e.key === "ArrowDown") { e.preventDefault(); step(1); }
+  else if (e.key === "ArrowUp") { e.preventDefault(); step(-1); }
+  else if (e.key === "n" || e.key === "N") { e.preventDefault(); const f = document.getElementById("bNote"); if (f) f.focus(); }
+});
+
+render();
+</script>
+</body>
+</html>
