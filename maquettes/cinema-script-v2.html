@@ -1,0 +1,1326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cinema Script</title>
+<meta name="oneapp-icon" content="🎬">
+<style>
+    /* --- Couleurs : sombre par défaut, clair selon l'appareil --- */
+    :root {
+        --bg-body: #121212; --text-main: #ffffff; --bg-panel: #1a1a1a; --bg-input: #2a2a2a;
+        --border-color: #333; --border-input: #555; --take-list-bg: #1e1e1e; --take-item-border: #333;
+        --text-muted: #888; --accent: #50e3c2; --blue: #4a90e2; --orange: #f5a623; --green: #7ed321; --red: #d0021b;
+        --on-accent: #0b2b25; --overlay: rgba(0,0,0,.6); --shadow: 0 8px 24px rgba(0,0,0,.5);
+        /* Avis : mêmes couleurs que les étiquettes de l'extension Premiere */
+        --av-master: #4caf50; --av-ok: #2196f3; --av-moyen: #ab47bc; --av-bof: #ff9800; --av-ko: #a1887f; --av-verif: #e91e63;
+        color-scheme: dark;
+    }
+    @media (prefers-color-scheme: light) {
+        :root:not([data-theme="dark"]) {
+            --bg-body: #f0f2f5; --text-main: #121212; --bg-panel: #ffffff; --bg-input: #f9f9f9;
+            --border-color: #ddd; --border-input: #ccc; --take-list-bg: #f8f9fa; --take-item-border: #eee; --text-muted: #666;
+            --overlay: rgba(0,0,0,.4); --shadow: 0 8px 24px rgba(0,0,0,.18); --av-ko: #795548;
+            color-scheme: light;
+        }
+    }
+    :root[data-theme="light"] {
+        --bg-body: #f0f2f5; --text-main: #121212; --bg-panel: #ffffff; --bg-input: #f9f9f9;
+        --border-color: #ddd; --border-input: #ccc; --take-list-bg: #f8f9fa; --take-item-border: #eee; --text-muted: #666;
+        --overlay: rgba(0,0,0,.4); --shadow: 0 8px 24px rgba(0,0,0,.18); --av-ko: #795548;
+        color-scheme: light;
+    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, sans-serif; background: var(--bg-body); color: var(--text-main); margin: 0; }
+    button { font-family: inherit; }
+    [hidden] { display: none !important; }
+    body.dragging, body.dragging * { user-select: none; -webkit-user-select: none; cursor: grabbing !important; }
+
+    /* Mise en page : téléphone = une colonne (le tableau de bord reste collé en haut en tournage),
+       ordinateur = panneau gauche (titre, modes, tableau de bord) + liste à droite */
+    .app-container { display: flex; flex-direction: column; padding: 15px; gap: 15px; }
+    .left-panel { display: contents; }
+    .right-panel { display: flex; flex-direction: column; padding-bottom: 130px; min-width: 0; }
+    @media (min-width: 900px) {
+        .app-container { flex-direction: row; align-items: flex-start; max-width: 1600px; margin: 0 auto; height: 100vh; overflow: hidden; }
+        .left-panel { display: flex; flex-direction: column; gap: 15px; width: 32%; height: calc(100vh - 30px); overflow-y: auto; padding-right: 10px; }
+        .right-panel { width: 68%; height: calc(100vh - 30px); overflow-y: auto; padding-right: 10px; }
+    }
+    @media (max-width: 899px) {
+        body[data-mode="shoot"] .dashboard { position: sticky; top: 0; z-index: 20; box-shadow: var(--shadow); }
+    }
+
+    .project-title { background: var(--bg-panel); border: 1px solid var(--border-color); color: var(--accent); padding: 15px; font-size: 1.2rem; font-weight: bold; border-radius: 12px; overflow-wrap: anywhere; }
+
+    /* Les deux grands modes */
+    .mode-toggle { display: grid; grid-template-columns: 1fr 1fr; background: var(--border-color); border-radius: 10px; overflow: hidden; gap: 2px; }
+    .mode-btn { padding: 14px 8px; border: none; background: var(--bg-panel); color: var(--text-muted); cursor: pointer; font-weight: bold; font-size: 1.05rem; display: grid; gap: 2px; }
+    .mode-btn small { font-weight: normal; font-size: .78rem; }
+    .mode-btn.active { background: var(--blue); color: white; }
+
+    /* Tableau de bord (mode tournage) */
+    .dashboard { background: var(--bg-panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); }
+    .status-board { font-size: 1.4rem; text-align: center; margin-bottom: 12px; background: var(--bg-input); padding: 12px; border-radius: 10px; font-weight: bold; border: 2px solid var(--accent); color: var(--accent); }
+    .status-board.inactive { border-color: var(--border-color); color: var(--text-muted); margin-bottom: 0; font-size: 1.1rem; }
+    .status-board .take-num { color: var(--text-main); }
+    .status-board.impro { border-color: var(--orange); }
+    .controls { display: grid; grid-template-columns: 1fr; gap: 10px; }
+    .clap-row { display: flex; gap: 10px; }
+    .btn-clap { flex: 1; background: var(--blue); color: white; font-size: 1.15rem; padding: 15px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; }
+    .btn-ref { background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-input); border-radius: 8px; padding: 0 14px; font-weight: bold; cursor: pointer; }
+    .btn-clap:active, .avis-btn:active { transform: scale(0.97); }
+    input, select { padding: 14px; font-size: 1.05rem; background: var(--bg-input); color: var(--text-main); border: 1px solid var(--border-input); border-radius: 8px; width: 100%; }
+    .avis-row { display: grid; grid-template-columns: repeat(6, 1fr); gap: 6px; }
+    .avis-btn { --av: var(--text-muted); background: var(--bg-input); border: 2px solid var(--av); border-radius: 8px; color: var(--text-main); padding: 8px 2px; cursor: pointer; display: grid; justify-items: center; gap: 2px; min-height: 58px; }
+    .avis-btn span { font-size: 1.35rem; line-height: 1; }
+    .avis-btn b { font-size: .72rem; color: var(--av); }
+    .avis-btn:disabled { opacity: .4; cursor: default; }
+    .avis-hint { font-size: .78rem; color: var(--text-muted); text-align: center; }
+    @media (max-width: 899px) {
+        .dashboard { padding: 10px; }
+        .status-board { font-size: 1.15rem; padding: 8px; margin-bottom: 8px; }
+        .controls { gap: 8px; }
+        .btn-clap { padding: 12px; font-size: 1.05rem; }
+        #com { padding: 10px 12px; font-size: 1rem; }
+        .avis-btn { min-height: 50px; padding: 6px 2px; }
+        .avis-hint { display: none; }
+    }
+    .av-master { --av: var(--av-master); } .av-ok { --av: var(--av-ok); } .av-moyen { --av: var(--av-moyen); }
+    .av-bof { --av: var(--av-bof); } .av-ko { --av: var(--av-ko); } .av-verif { --av: var(--av-verif); }
+
+    .action-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; background: var(--bg-panel); padding: 15px; border-radius: 12px; border: 1px solid var(--border-color); }
+    .btn-action { padding: 14px; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; font-size: 1rem; color: black; }
+    .btn-pdf { background: var(--orange); }
+    .btn-pdf-decoupage { background: var(--accent); }
+
+    /* Barre au-dessus de la liste : vue + recherche */
+    .list-tools { display: flex; gap: 8px; align-items: stretch; position: sticky; top: 0; z-index: 10; background: var(--bg-body); padding: 0 0 10px; }
+    body[data-mode="shoot"] .list-tools { position: static; }
+    .sub-toggle { flex: 1; display: grid; grid-auto-flow: column; grid-auto-columns: 1fr; background: var(--border-color); border-radius: 8px; overflow: hidden; gap: 2px; }
+    .sub-btn { border: none; background: var(--bg-panel); color: var(--text-muted); padding: 11px 6px; font-weight: bold; cursor: pointer; font-size: .95rem; }
+    .sub-btn.active { background: var(--bg-input); color: var(--accent); box-shadow: inset 0 -3px 0 var(--accent); }
+    .tool-btn { width: 48px; flex: none; border: 1px solid var(--border-color); background: var(--bg-panel); color: var(--text-main); border-radius: 8px; font-size: 1.15rem; cursor: pointer; }
+    .tool-btn.on { border-color: var(--accent); background: var(--bg-input); }
+    .search-bar { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 10px; }
+    .search-bar input { padding: 11px 12px; font-size: 1rem; }
+    .search-count { font-size: .85rem; color: var(--text-muted); white-space: nowrap; }
+    .search-tip { grid-column: 1 / -1; font-size: .8rem; color: var(--text-muted); }
+
+    /* Découpage : séquences > plans */
+    .seq-list { display: flex; flex-direction: column; gap: 10px; }
+    .acc-header { display: flex; flex-direction: column; padding: 12px 15px; border-radius: 8px; border-left: 5px solid; color: white; gap: 8px; }
+    .acc-seq { background: #34495e; border-left-color: var(--blue); }
+    .acc-plan { background: #2c3e50; border-left-color: var(--accent); }
+    .acc-plan.impro { border-left-color: var(--orange); }
+    .acc-plan.active { outline: 2px solid var(--accent); background: #1f2d3d; }
+    .acc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+    .acc-title { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-grow: 1; user-select: none; background: none; border: none; color: inherit; padding: 0; text-align: left; min-width: 0; }
+    .acc-toggle { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-grow: 1; align-self: stretch; background: none; border: none; color: inherit; cursor: pointer; padding: 0; }
+    .header-label { font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
+    .seq-num { background: none; border: none; color: inherit; font-weight: bold; font-size: 1.2rem; padding: 2px 4px; margin-left: -4px; border-radius: 5px; cursor: text; display: flex; align-items: baseline; gap: 6px; }
+    .seq-num b { border-bottom: 1px dashed rgba(255,255,255,.5); min-width: 1ch; }
+    .seq-num .pen { font-size: .8rem; opacity: .55; }
+    .seq-num:hover { background: rgba(255,255,255,.1); }
+    .seq-num-edit { display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 1.2rem; }
+    .seq-num-edit input { width: 5.5rem; padding: 6px 8px; font-size: 1.1rem; font-weight: bold; background: rgba(0,0,0,.35); color: white; border-color: var(--accent); }
+    .seq-error { background: rgba(208,2,27,.25); border: 1px solid var(--red); color: white; border-radius: 6px; padding: 6px 10px; font-size: .9rem; }
+    .seq-meta { font-size: .85rem; opacity: .7; white-space: nowrap; }
+    .chevron { font-size: 0.9rem; opacity: 0.7; }
+    .header-input { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; font-size: 1rem; border-radius: 5px; width: 100%; resize: none; overflow: hidden; line-height: 1.4; font-family: inherit; margin: 0; }
+    .header-input:focus { outline: 1px solid var(--accent); background: rgba(0,0,0,0.4); }
+    .header-input[readonly] { border-color: transparent; background: transparent; }
+    .plan-info-ro { opacity: .85; font-size: .95rem; line-height: 1.4; white-space: pre-wrap; }
+    .inline-actions { display: flex; gap: 4px; align-items: center; flex: none; }
+    .btn-icon { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.6; border-radius: 5px; color: inherit; }
+    .btn-icon:hover { opacity: 1; background: rgba(255,255,255,0.1); }
+    .btn-video { opacity: .85; }
+    .seq-content { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px 15px; }
+    .seq-content .empty { border: 1px dashed var(--border-input); border-radius: 8px; }
+    .take-badge-mini { font-size: .8rem; font-weight: bold; background: rgba(0,0,0,.3); padding: 2px 8px; border-radius: 10px; white-space: nowrap; }
+
+    /* Vidéo de référence (Google Drive) */
+    .video-chip { display: flex; align-items: center; gap: 6px; background: rgba(0,0,0,.28); border-radius: 8px; padding: 4px 4px 4px 6px; }
+    .video-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: none; color: inherit; cursor: pointer; text-align: left; padding: 2px; }
+    .vthumb { width: 54px; height: 32px; flex: none; border-radius: 4px; background: linear-gradient(135deg, #0f2027, #2c5364); display: grid; place-items: center; font-size: .9rem; color: white; }
+    .vname { font-size: .9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .vsrc { font-size: .75rem; opacity: .6; white-space: nowrap; }
+
+    .take-list { margin: 6px 0 0 30px; color: var(--text-main); background: var(--take-list-bg); border-radius: 8px; padding: 6px 10px; border-left: 2px solid var(--border-input); }
+    .take-item { display: flex; justify-content: space-between; gap: 10px; padding: 9px 0 9px 10px; border-bottom: 1px solid var(--take-item-border); align-items: center; box-shadow: inset 3px 0 0 var(--av, var(--text-muted)); }
+    .take-item:last-child { border-bottom: none; }
+    .take-com { color: var(--text-muted); font-size: 0.9rem; overflow-wrap: anywhere; }
+    .empty { color: var(--text-muted); padding: 10px; font-style: italic; }
+    .btn-delete { background: var(--red); color: white; border: none; padding: 7px 11px; border-radius: 5px; cursor: pointer; flex: none; }
+
+    /* Plan de travail / ordre de tournage */
+    .tournage-list { display: flex; flex-direction: column; gap: 8px; }
+    .tournage-item { background: #2c3e50; color: white; border-radius: 8px; scroll-margin-top: 240px; }
+    .tournage-item.active { outline: 2px solid var(--accent); background: #1f2d3d; }
+    .tournage-item.impro { box-shadow: inset 4px 0 0 var(--orange); }
+    .tournage-item.done:not(.active) { opacity: .7; }
+    .tournage-row { display: flex; align-items: center; gap: 10px; padding: 10px 15px; min-height: 52px; }
+    .tournage-sep { background: #5a3c20; border-left: 4px solid var(--orange); }
+    .t-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: none; color: inherit; padding: 0; cursor: pointer; text-align: left; font-size: 1rem; }
+    .t-code { font-weight: bold; color: var(--blue); flex: none; }
+    .tournage-item.impro .t-code { color: var(--orange); }
+    .tournage-item.active .t-code { color: var(--accent); }
+    .t-info { flex: 1; min-width: 0; opacity: 0.8; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .t-temps { width: 90px; flex: none; }
+    .t-temps-ro { font-size: .85rem; opacity: .7; flex: none; }
+    .sep-label { font-weight: bold; color: var(--orange); flex: none; }
+    .sep-total { font-size: .8rem; color: #ffd9a8; white-space: nowrap; flex: none; }
+    .take-dots { display: inline-flex; gap: 3px; flex: none; }
+    .take-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--av, var(--text-muted)); display: block; }
+    .last-marker { font-size: .78rem; font-weight: bold; color: var(--accent); padding: 8px 15px 0; }
+    .shoot-takes { padding: 0 15px 12px; }
+    .shoot-takes .take-list { margin-left: 0; }
+    @media (max-width: 560px) { .t-temps { width: 70px; } .tournage-row { padding: 8px 10px; gap: 8px; } }
+
+    .drag-handle { cursor: grab; font-size: 1.6rem; padding: 4px 4px 4px 0; color: var(--text-muted); touch-action: none; user-select: none; flex: none; background: none; border: none; }
+    .tournage-item.moving { opacity: .35; }
+
+    /* Boutons flottants : maintenir puis glisser dans la liste pour créer à l'endroit voulu */
+    .dock { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 14px; z-index: 40; }
+    .dock-btn { display: grid; justify-items: center; gap: 4px; background: none; border: none; padding: 0; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none; color: var(--text-main); }
+    .dock-btn .disc { width: 56px; height: 56px; border-radius: 50%; display: grid; place-items: center; font-size: 1.5rem; box-shadow: var(--shadow); border: 2px solid rgba(255,255,255,.15); }
+    .dock-btn small { font-size: .72rem; font-weight: bold; background: var(--bg-panel); border: 1px solid var(--border-color); padding: 1px 7px; border-radius: 10px; }
+    .dock-btn.plan .disc { background: var(--blue); }
+    .dock-btn.seq .disc { background: #34495e; border-color: var(--blue); }
+    .dock-btn.sep .disc { background: #5a3c20; border-color: var(--orange); }
+    .dock-btn.impro .disc { background: var(--orange); }
+    .dock-btn.locate .disc { background: var(--bg-panel); border-color: var(--accent); }
+    .dock-btn.locate { cursor: pointer; }
+    .drag-ghost { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -100%); background: var(--bg-panel); border: 2px solid var(--accent); color: var(--text-main); border-radius: 20px; padding: 6px 12px; font-weight: bold; box-shadow: var(--shadow); white-space: nowrap; }
+    .drop-line { position: fixed; z-index: 55; pointer-events: none; height: 4px; background: var(--accent); border-radius: 2px; box-shadow: 0 0 0 3px rgba(80,227,194,.25); }
+    .drop-line span { position: absolute; left: 10px; top: -13px; background: var(--accent); color: var(--on-accent); font-size: .8rem; font-weight: bold; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+    .drop-into { outline: 3px dashed var(--accent) !important; outline-offset: 2px; }
+
+    .flash { animation: flash 1.6s ease-out; }
+    @keyframes flash { 0%, 35% { box-shadow: 0 0 0 3px var(--accent); } }
+    @media (prefers-reduced-motion: reduce) { .flash { animation: none; } }
+
+    /* Message « Annuler » et fenêtres */
+    .toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(104px + env(safe-area-inset-bottom, 0px)); z-index: 70; background: var(--text-main); color: var(--bg-body); border-radius: 10px; padding: 12px 14px; display: flex; gap: 14px; align-items: center; max-width: min(92vw, 480px); box-shadow: var(--shadow); font-size: .95rem; }
+    .toast button { background: none; border: none; color: var(--blue); font-weight: bold; text-transform: uppercase; cursor: pointer; padding: 4px; flex: none; }
+    .modal-back { position: fixed; inset: 0; z-index: 80; background: var(--overlay); display: grid; place-items: center; padding: 16px; }
+    .modal { background: var(--bg-panel); border: 1px solid var(--border-color); border-radius: 12px; padding: 18px; width: min(460px, 100%); display: grid; gap: 14px; max-height: 90vh; overflow-y: auto; }
+    .modal h3 { margin: 0; font-size: 1.15rem; }
+    .modal p { margin: 0; color: var(--text-muted); line-height: 1.45; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+    .btn-m { border: 1px solid var(--border-input); background: var(--bg-input); color: var(--text-main); border-radius: 8px; padding: 11px 16px; font-weight: bold; cursor: pointer; }
+    .btn-m.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+    .btn-m.impro { background: var(--orange); color: black; border-color: var(--orange); }
+    .btn-m.danger { background: var(--red); color: white; border-color: var(--red); }
+    .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+    .chip-btn { border: 1px solid var(--border-input); background: var(--bg-input); color: var(--text-main); border-radius: 16px; padding: 7px 12px; cursor: pointer; font-weight: bold; }
+    .chip-btn.on { background: var(--orange); border-color: var(--orange); color: black; }
+    .video-frame { aspect-ratio: 16 / 9; max-width: 100%; background: #000; border-radius: 8px; display: grid; place-items: center; color: #fff; font-size: 2.5rem; }
+
+    /* Impression (PDF) */
+    #printArea { display: none; }
+    @media print {
+        body { background: white !important; color: black !important; }
+        .app-container, .dock, .toast { display: none !important; }
+        #printArea { display: block !important; padding: 20px; }
+        .print-title { color: #d0021b; text-align: center; font-size: 28px; margin-bottom: 5px; text-transform: uppercase; }
+        .print-subtitle { text-align: center; color: #555; margin-bottom: 30px; font-size: 14px; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        tr { page-break-inside: avoid; }
+        th { background-color: #222 !important; color: white !important; padding: 10px; text-align: left; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        td { border: 1px solid #ccc; padding: 10px; vertical-align: top; white-space: pre-wrap; }
+        .print-seq-row { background-color: #e3f2fd !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        .print-seq-num { font-size: 16px; font-weight: bold; color: #4a90e2; }
+        .print-seq-info { font-size: 14px; font-weight: bold; color: #333; }
+        .print-sep-row { background-color: #fff3e0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; text-align: center; font-weight: bold; color: #e65100; font-size: 14px; }
+    }
+</style>
+</head>
+<body data-mode="prep">
+<!--
+CINEMA SCRIPT (version One App) — MAQUETTE v2 (phase de design).
+Deux modes :
+- PRÉPARATION : « Découpage » (séquences > plans, toujours en ordre croissant, trous permis : 1, 2, 5, 6…)
+  et « Plan de travail » (tous les plans dans l'ordre de tournage + séparateurs, recherche).
+  Création par les boutons flottants : maintenir, glisser dans la liste, lâcher à l'endroit voulu.
+- TOURNAGE : tableau de bord collé en haut (clap, commentaire, avis = enregistrer la prise),
+  liste dans l'ordre de tournage (placée sur la dernière prise) ou dans l'ordre du scénario, plan impro.
+
+Structure de state (CONTRAT avec l'extension Premiere : ne pas renommer ces champs) :
+{
+  v: 1,
+  sequences:    [ { id: 1, info: "Lieu, personnages..." } ],
+  plans:        [ { seqId: 1, id: 1, impro: 0|1, info: "", temps: "", video: null | { id, name } } ],
+  takes:        [ { uid, seqId, planId, prise, avis, com, timestamp } ],
+  tournageList: [ { type: "plan", seqId, planId } | { type: "sep", text: "Lundi matin" } ]
+}
+- NOUVEAU : plans[].video = vidéo de référence choisie dans Google Drive (Picker), ignorée par l'extension.
+- Numérotation à l'insertion : nouveau numéro = numéro précédent + 1 ; s'il est déjà pris, seuls les numéros
+  qui se suivent derrière sont décalés de 1 (un trou arrête le décalage).
+- Les numéros de prise ne sont JAMAIS renumérotés : prise suivante = max + 1.
+- La classe DigitalClapper est une copie exacte de l'original : ne pas la modifier.
+-->
+<div class="app-container">
+    <div class="left-panel">
+        <div class="project-title">🎬 <span id="projName">Projet</span></div>
+
+        <div class="mode-toggle" role="tablist" aria-label="Mode">
+            <button id="btnModePrep" class="mode-btn active" type="button">🛠️ Préparation<small>découpage · plan de travail</small></button>
+            <button id="btnModeShoot" class="mode-btn" type="button">🎬 Tournage<small>clap · prises</small></button>
+        </div>
+
+        <div class="dashboard" id="dashboard" hidden>
+            <div id="statusBoard" class="status-board inactive">SÉLECTIONNEZ UN PLAN</div>
+            <div id="takeControls" class="controls" hidden>
+                <div class="clap-row">
+                    <button class="btn-clap" id="btnClap" type="button">🎬 Clap audio</button>
+                    <button class="btn-ref" id="btnRef" type="button" title="Vidéo de référence du plan" hidden>▶ Réf.</button>
+                </div>
+                <input type="text" id="com" placeholder="Commentaire / Raccord (ex: point flou)" autocomplete="off">
+                <div class="avis-row" id="avisRow"></div>
+                <div class="avis-hint">Un appui sur l'avis enregistre la prise</div>
+            </div>
+        </div>
+
+        <div class="action-row" id="pdfRow">
+            <button class="btn-action btn-pdf" type="button" id="btnPdfTournage">📄 PDF (Tournage)</button>
+            <button class="btn-action btn-pdf-decoupage" type="button" id="btnPdfDecoupage">📄 PDF (Découpage)</button>
+        </div>
+    </div>
+
+    <div class="right-panel" id="rightPanel">
+        <div class="list-tools">
+            <div class="sub-toggle" id="subToggle"></div>
+            <button class="tool-btn" id="btnSearch" type="button" title="Rechercher ou filtrer les plans" aria-label="Rechercher">🔍</button>
+        </div>
+        <div class="search-bar" id="searchBar" hidden>
+            <input type="search" id="searchInput" placeholder="Mot, personnage, décor… ou 5 / 5.3" autocomplete="off" aria-label="Rechercher un plan">
+            <span class="search-count" id="searchCount"></span>
+            <div class="search-tip">Un nombre seul = la séquence (« 5 »), « 5.3 » = le plan 3 de la séquence 5.</div>
+        </div>
+        <div id="listContainer"></div>
+    </div>
+</div>
+
+<div class="dock" id="dock"></div>
+<div id="printArea"></div>
+
+<script>
+// --- AVIS (libellés lus par l'extension : ne pas modifier) ---
+const AVIS = ["❓ À vérifier", "✅ OK (Bonne)", "⭐ MASTER (Parfaite)", "😐 Moyen", "😕 Bof", "❌ KO (Ratée)"];
+// Ordre des boutons au plateau, du meilleur au pire
+const AVIS_BUTTONS = [
+  { label: AVIS[2], e: "⭐", s: "Master" }, { label: AVIS[1], e: "✅", s: "OK" }, { label: AVIS[3], e: "😐", s: "Moyen" },
+  { label: AVIS[4], e: "😕", s: "Bof" }, { label: AVIS[5], e: "❌", s: "KO" }, { label: AVIS[0], e: "❓", s: "À vérif." }
+];
+function avisClass(a) {
+  a = a || "";
+  if (a.includes("MASTER")) return "av-master";
+  if (a.includes("OK")) return "av-ok";
+  if (a.includes("Moyen")) return "av-moyen";
+  if (a.includes("Bof")) return "av-bof";
+  if (a.includes("KO")) return "av-ko";
+  return "av-verif";
+}
+
+// --- Projet d'exemple (utilisé seulement hors de One App) ---
+function demoData() {
+  const S = (id, info) => ({ id, info });
+  const P = (seqId, id, info, temps, video) => ({ seqId, id, impro: 0, info, temps, video: video ? { id: "demo", name: video } : null });
+  const sequences = [
+    S(1, "INT. CUISINE – JOUR\nMarie, Paul"), S(2, "INT. SALON – JOUR\nMarie, Paul"),
+    S(5, "EXT. RUE DEVANT L'IMMEUBLE – NUIT\nPaul"), S(6, "INT. CAGE D'ESCALIER – NUIT\nMarie, la voisine"),
+    S(7, "INT. APPARTEMENT DE LA VOISINE – NUIT\nMarie, la voisine"), S(9, "EXT. TOIT DE L'IMMEUBLE – AUBE\nMarie, Paul")
+  ];
+  const plans = [
+    P(1, 1, "PL fixe. Marie entre, pose les courses. Paul lit sans lever les yeux.", "20 min"),
+    P(1, 2, "PM travelling. Les mains de Marie rangent, jusqu'au frigo vide.", "30 min", "repetition_cuisine_1-2.mp4"),
+    P(1, 3, "GP. Paul lève enfin les yeux de son journal.", "15 min"),
+    P(1, 4, "Champ-contrechamp : « Tu as encore oublié le pain. »", "40 min"),
+    P(2, 1, "PE. Le salon en désordre, Marie traverse.", "20 min"),
+    P(2, 2, "PR. Paul au téléphone, dos à la fenêtre.", "25 min"),
+    P(2, 3, "Insert. La photo de mariage retournée.", "10 min"),
+    P(5, 1, "PE grue. Paul sort de l'immeuble, la rue est vide.", "45 min", "demo_grue_5-1.mp4"),
+    P(5, 2, "PA épaule. Paul allume une cigarette, hésite.", "25 min"),
+    P(5, 3, "Insert. Le briquet qui ne s'allume pas.", "10 min"),
+    P(5, 4, "PL. Paul s'éloigne sous les réverbères.", "20 min"),
+    P(6, 1, "PM panoramique. La voisine entrouvre sa porte.", "30 min"),
+    P(6, 2, "GP. Marie, essoufflée, s'arrête sur le palier.", "20 min"),
+    P(6, 3, "Plongée. La cage d'escalier vue du dernier étage.", "25 min"),
+    P(7, 1, "PE. L'appartement encombré de plantes.", "20 min"),
+    P(7, 2, "Champ-contrechamp. La voisine sert le thé.", "45 min"),
+    P(9, 1, "PL. Le jour se lève sur les toits.", "30 min", "reperage_toit_9-1.mp4"),
+    P(9, 2, "PM. Marie et Paul assis côte à côte.", "30 min"),
+    P(9, 3, "GP. La main de Paul cherche celle de Marie.", "15 min")
+  ];
+  const sep = (text) => ({ type: "sep", text });
+  const pl = (k) => { const [s, p] = k.split(".").map(Number); return { type: "plan", seqId: s, planId: p }; };
+  const tournageList = [
+    sep("Lundi 14 · matin · Appartement"), ...["1.1", "1.2", "1.3", "2.1", "2.2", "1.4", "2.3"].map(pl),
+    sep("Lundi 14 · après-midi · Cage d'escalier"), ...["6.1", "6.2", "7.1", "6.3", "7.2"].map(pl),
+    sep("Mardi 15 · nuit · Rue"), ...["5.1", "5.2", "5.3", "5.4"].map(pl),
+    sep("Mercredi 16 · aube · Toit"), ...["9.1", "9.2", "9.3"].map(pl)
+  ];
+  const takes = [];
+  let t = Date.parse("2026-10-14T06:40:00Z");
+  const T = (k, avis, com) => {
+    const [s, p] = k.split(".").map(Number);
+    t += 7 * 60000;
+    takes.push({ uid: "demo" + takes.length, seqId: s, planId: p, prise: takes.filter((x) => x.seqId === s && x.planId === p).length + 1, avis, com: com || "", timestamp: new Date(t).toISOString() });
+  };
+  T("1.1", AVIS[5], "Perche dans le champ"); T("1.1", AVIS[1]); T("1.1", AVIS[2], "La bonne");
+  T("1.2", AVIS[4], "Bruit de frigo"); T("1.2", AVIS[1]);
+  T("1.3", AVIS[3], "Regard trop tôt"); T("1.3", AVIS[2]);
+  T("2.1", AVIS[1]);
+  T("2.2", AVIS[5], "Texte oublié"); T("2.2", AVIS[3], "Point flou en fin de plan");
+  return { v: 1, sequences, plans, takes, tournageList };
+}
+
+window.OneAppAPI = window.OneAppAPI || {
+  loadData: async () => ({ app_data: demoData(), readOnly: false }),
+  saveData: (data) => {},
+  onDataChange: () => {},
+  onModeChange: () => {},
+  getFileName: () => "Le Dernier Métro (exemple)",
+  onNameChange: () => {}
+};
+
+// --- CLAP AUDIO (copie exacte de l'original, ne pas modifier) ---
+class DigitalClapper {
+    constructor() {
+        this.audioCtx = null;
+        this.dtmfFreqs = {
+            //'1': [697, 1209], '2': [697, 1336], '3': [697, 1477],
+            //'4': [770, 1209], '5': [770, 1336], '6': [770, 1477],
+            //'7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
+            //'*': [941, 1209], '0': [941, 1336], '#': [941, 1477]
+
+            '1': [10697, 12209], '2': [10697, 12336], '3': [10697, 12477],
+            '4': [10770, 12209], '5': [10770, 12336], '6': [10770, 12477],
+            '7': [10852, 12209], '8': [10852, 12336], '9': [10852, 12477],
+            '*': [10941, 12209], '0': [10941, 12336], '#': [10941, 12477]
+        };
+    }
+    play(scene, shot, take) {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+        const payload = `*${scene}*${shot}*${take}#*`;
+        const now = this.audioCtx.currentTime;
+
+        //this._playTransient(now);
+
+        let timeCursor = now + 0.065;
+        const toneDuration = 0.080;
+        const pauseDuration = 0.120;
+        for (let i = 0; i < payload.length; i++) {
+            const char = payload[i];
+            if (this.dtmfFreqs[char]) {
+                this._playDTMF(this.dtmfFreqs[char][0], this.dtmfFreqs[char][1], timeCursor, toneDuration);
+                timeCursor += toneDuration + pauseDuration;
+            }
+        }
+
+    }
+    _playTransient(startTime) {
+        const clickOsc = this.audioCtx.createOscillator();
+        const clickGain = this.audioCtx.createGain();
+        clickOsc.type = 'square';
+        clickOsc.frequency.value = 1000;
+        clickGain.gain.setValueAtTime(0, startTime);
+        clickGain.gain.linearRampToValueAtTime(1, startTime + 0.001);
+        clickGain.gain.setValueAtTime(1, startTime + 0.010);
+        clickGain.gain.linearRampToValueAtTime(0, startTime + 0.015);
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.audioCtx.destination);
+        clickOsc.start(startTime);
+        clickOsc.stop(startTime + 0.020);
+    }
+    _playDTMF(f1, f2, startTime, duration) {
+        const osc1 = this.audioCtx.createOscillator();
+        const osc2 = this.audioCtx.createOscillator();
+        const gainNode = this.audioCtx.createGain();
+        osc1.frequency.value = f1;
+        osc2.frequency.value = f2;
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.75, startTime + 0.005);
+        gainNode.gain.setValueAtTime(0.75, startTime + duration - 0.005);
+        gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(this.audioCtx.destination);
+        osc1.start(startTime);
+        osc2.start(startTime);
+        osc1.stop(startTime + duration);
+        osc2.stop(startTime + duration);
+    }
+}
+const clapper = new DigitalClapper();
+
+// --- DONNÉES ---
+const DEFAULT_STATE = {
+  v: 1,
+  sequences: [{ id: 1, info: "" }],
+  plans: [{ seqId: 1, id: 1, impro: 0, info: "", temps: "", video: null }],
+  takes: [],
+  tournageList: [{ type: "plan", seqId: 1, planId: 1 }]
+};
+let state = structuredClone(DEFAULT_STATE);
+let readOnly = false;
+
+function normalize(data) {
+  if (!data || Array.isArray(data) || typeof data !== "object") return structuredClone(DEFAULT_STATE);
+  const s = { ...structuredClone(DEFAULT_STATE), ...data };
+  ["sequences", "plans", "takes", "tournageList"].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; });
+  s.takes.forEach((t) => { if (!t.uid) t.uid = newUid(); });
+  s.plans.forEach((p) => { if (p.video === undefined) p.video = null; });
+  // Tout plan figure dans le plan de travail (ajouté à la fin s'il manque)
+  s.plans.forEach((p) => {
+    if (!s.tournageList.some((i) => i.type === "plan" && i.seqId === p.seqId && i.planId === p.id)) s.tournageList.push({ type: "plan", seqId: p.seqId, planId: p.id });
+  });
+  s.v = 1;
+  return s;
+}
+function newUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+
+// --- ÉTAT DE L'ÉCRAN (non enregistré) ---
+let mode = "prep";              // 'prep' (préparation) ou 'shoot' (tournage)
+let prepView = "decoupage";     // 'decoupage' ou 'travail'
+let shootView = "tournage";     // 'tournage' ou 'scenario'
+const openSeqs = new Set();
+let activeSeq = null, activePlan = null;
+let editingSeq = null, seqError = "";
+let searchOpen = false, search = "";
+let flashSel = null, focusSel = null, scrollSel = null;
+let pendingRemote = null;
+
+// --- ENREGISTREMENT ---
+let saveTimer = null;
+function commit() { if (readOnly) return; clearTimeout(saveTimer); render(); OneAppAPI.saveData(state); }
+function saveSoon() { if (readOnly) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => OneAppAPI.saveData(state), 800); }
+function saveNow() { if (!saveTimer) return; clearTimeout(saveTimer); saveTimer = null; if (!readOnly) OneAppAPI.saveData(state); }
+
+// --- OUTILS ---
+function el(tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "text") e.textContent = v;
+    else if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "value") e.value = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  children.flat(Infinity).forEach((c) => { if (c !== null && c !== undefined && c !== false) e.append(c); });
+  return e;
+}
+function autoResize(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+const $ = (id) => document.getElementById(id);
+const isDesktop = () => window.matchMedia("(min-width: 900px)").matches;
+
+function findPlan(seqId, planId) { return state.plans.find((p) => p.seqId === seqId && p.id === planId); }
+function seqsSorted() { return [...state.sequences].sort((a, b) => a.id - b.id); }
+function plansOfSeq(seqId) { return state.plans.filter((p) => p.seqId === seqId).sort((a, b) => a.id - b.id); }
+function takesOf(seqId, planId) { return state.takes.filter((t) => t.seqId === seqId && t.planId === planId).sort((a, b) => a.prise - b.prise); }
+function nextTakeNum(seqId, planId) { return takesOf(seqId, planId).reduce((m, t) => Math.max(m, t.prise), 0) + 1; }
+function hasTakes(pred) { return state.takes.some(pred); }
+function projectName() { return (OneAppAPI.getFileName && OneAppAPI.getFileName()) || "Projet"; }
+function minutesOf(s) {
+  s = String(s || "").toLowerCase().replace(/\s/g, "");
+  let m = s.match(/(\d+)h(\d+)?/);
+  if (m) return +m[1] * 60 + (+m[2] || 0);
+  m = s.match(/(\d+)/);
+  return m ? +m[1] : 0;
+}
+function fmtMin(m) { return m < 60 ? m + " min" : Math.floor(m / 60) + " h" + (m % 60 ? " " + String(m % 60).padStart(2, "0") : ""); }
+
+function checkSelection() {
+  if (activeSeq !== null && !findPlan(activeSeq, activePlan)) { activeSeq = null; activePlan = null; }
+}
+
+function textField(obj, key, placeholder, multiline) {
+  const f = el(multiline ? "textarea" : "input", {
+    class: "header-input", placeholder: readOnly ? "" : placeholder, value: obj[key] || "", readonly: readOnly, rows: multiline ? 1 : null,
+    oninput: (e) => { obj[key] = e.target.value; if (multiline) autoResize(e.target); saveSoon(); },
+    onchange: saveNow
+  });
+  if (!multiline) f.type = "text";
+  if (multiline) requestAnimationFrame(() => autoResize(f));
+  return f;
+}
+
+// --- MESSAGES ET FENÊTRES ---
+let toastTimer = null;
+function toast(msg, undo) {
+  clearTimeout(toastTimer);
+  document.querySelectorAll(".toast").forEach((t) => t.remove());
+  const t = el("div", { class: "toast", role: "status" }, el("span", { text: msg }),
+    undo ? el("button", { type: "button", text: "Annuler", onclick: () => { undo(); t.remove(); } }) : null);
+  document.body.append(t);
+  toastTimer = setTimeout(() => t.remove(), undo ? 6000 : 3500);
+}
+function openModal(title, build) {
+  const close = () => back.remove();
+  const back = el("div", { class: "modal-back", onclick: (e) => { if (e.target === back) close(); } },
+    el("div", { class: "modal", role: "dialog", "aria-label": title }, el("h3", { text: title }), build(close)));
+  document.body.append(back);
+  const first = back.querySelector("input, .btn-m.primary, .btn-m.impro");
+  if (first) first.focus();
+  return close;
+}
+function ask(title, message, okLabel, danger) {
+  return new Promise((resolve) => {
+    openModal(title, (close) => [
+      el("p", { text: message }),
+      el("div", { class: "modal-actions" },
+        el("button", { class: "btn-m", type: "button", text: "Annuler", onclick: () => { close(); resolve(false); } }),
+        el("button", { class: "btn-m " + (danger ? "danger" : "primary"), type: "button", text: okLabel || "Continuer", onclick: () => { close(); resolve(true); } }))
+    ]);
+  });
+}
+function confirmRenumber(affected) {
+  if (!affected) return Promise.resolve(true);
+  return ask("Prises déjà tournées", "Des prises existent sur les éléments renumérotés : leur clap audio garde l'ancien numéro, la synchronisation au montage ne les retrouvera plus.", "Renuméroter quand même", true);
+}
+
+// --- VIDÉO DE RÉFÉRENCE (Google Drive) ---
+function pickVideo(p) {
+  // Dans l'app : Google Picker (vidéos de Drive) → { id, name }. Ici : une vidéo fictive.
+  p.video = { id: "demo", name: "demo_plan_" + p.seqId + "-" + p.id + ".mp4" };
+  commit();
+  toast("Vidéo liée au plan " + p.seqId + "." + p.id + " (ici fictive : le sélecteur Google Drive viendra plus tard)");
+}
+function previewVideo(p) {
+  openModal("Plan " + p.seqId + "." + p.id + " · vidéo de référence", (close) => [
+    // Dans l'app : <iframe src="https://drive.google.com/file/d/ID/preview">
+    el("div", { class: "video-frame", "aria-label": "Lecteur vidéo" }, "▶"),
+    el("p", { text: p.video.name + " · Google Drive" }),
+    el("div", { class: "modal-actions" },
+      mode === "prep" && !readOnly ? el("button", { class: "btn-m danger", type: "button", text: "Retirer la vidéo", onclick: () => { p.video = null; close(); commit(); } }) : null,
+      mode === "prep" && !readOnly ? el("button", { class: "btn-m", type: "button", text: "Changer", onclick: () => { close(); pickVideo(p); } }) : null,
+      el("button", { class: "btn-m primary", type: "button", text: "Fermer", onclick: close }))
+  ]);
+}
+function videoChip(p) {
+  return el("div", { class: "video-chip" },
+    el("button", { class: "video-open", type: "button", title: "Voir la vidéo de référence", onclick: () => previewVideo(p) },
+      el("span", { class: "vthumb", text: "▶" }), el("span", { class: "vname", text: p.video.name }), el("span", { class: "vsrc", text: "Drive" })));
+}
+
+// --- RECHERCHE ---
+const fold = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+function parseQuery(q) {
+  q = fold(q).trim();
+  if (!q) return null;
+  let m = q.match(/^(\d+)$/);
+  if (m) return { seq: +m[1] };
+  m = q.match(/^(\d+)\s*[.\-\/ ]\s*(\d+)$/);
+  if (m) return { seq: +m[1], plan: +m[2] };
+  return { text: q };
+}
+function matches(p, q) {
+  if (!q) return true;
+  if (q.seq !== undefined) return p.seqId === q.seq && (q.plan === undefined || p.id === q.plan);
+  const seq = state.sequences.find((s) => s.id === p.seqId);
+  return fold([p.info, p.temps, seq && seq.info, p.video && p.video.name].join(" ")).includes(q.text);
+}
+
+// --- RENDU ---
+function render() {
+  checkSelection();
+  document.body.dataset.mode = mode;
+  $("projName").textContent = projectName();
+  $("btnModePrep").classList.toggle("active", mode === "prep");
+  $("btnModeShoot").classList.toggle("active", mode === "shoot");
+  $("dashboard").hidden = mode !== "shoot";
+  $("pdfRow").hidden = mode !== "prep";
+
+  const views = mode === "prep"
+    ? [["decoupage", "📖 Découpage"], ["travail", "🗓️ Plan de travail"]]
+    : [["tournage", "🎥 Ordre de tournage"], ["scenario", "📖 Ordre du scénario"]];
+  const current = mode === "prep" ? prepView : shootView;
+  $("subToggle").replaceChildren(...views.map(([k, label]) => el("button", {
+    class: "sub-btn" + (k === current ? " active" : ""), type: "button", text: label,
+    onclick: () => { saveNow(); if (mode === "prep") prepView = k; else shootView = k; render(); if (mode === "shoot") scrollToLast(); }
+  })));
+  const searchable = (mode === "prep" && prepView === "travail") || (mode === "shoot" && shootView === "tournage");
+  $("btnSearch").hidden = !searchable;
+  $("btnSearch").classList.toggle("on", searchOpen);
+  $("searchBar").hidden = !(searchable && searchOpen);
+
+  let list;
+  if (mode === "prep") list = prepView === "decoupage" ? renderDecoupage() : renderTravail();
+  else list = shootView === "tournage" ? renderShootList() : renderDecoupage();
+  $("listContainer").replaceChildren(list);
+  renderDock();
+  updateDashboard();
+
+  requestAnimationFrame(() => {
+    if (flashSel) { const n = document.querySelector(flashSel); if (n) { n.classList.add("flash"); if (!scrollSel) n.scrollIntoView({ block: "nearest" }); } flashSel = null; }
+    if (scrollSel) { const n = document.querySelector(scrollSel); if (n) n.scrollIntoView({ block: "center" }); scrollSel = null; }
+    if (focusSel) { const n = document.querySelector(focusSel); if (n) { n.focus({ preventScroll: true }); if (n.select && n.tagName === "INPUT") n.select(); } focusSel = null; }
+  });
+}
+
+// Liste des séquences (préparation : modifiable ; tournage : lecture, appui = plan actif)
+function renderDecoupage() {
+  const prep = mode === "prep";
+  const wrap = el("div", { class: "seq-list" });
+  const seqs = seqsSorted();
+  if (!seqs.length) wrap.append(el("div", { class: "empty", text: "Aucune séquence. Glissez le bouton « Séquence » (en bas) dans cette zone." }));
+  seqs.forEach((seq) => {
+    const open = openSeqs.has(seq.id);
+    const plans = plansOfSeq(seq.id);
+    const nTakes = state.takes.filter((t) => t.seqId === seq.id).length;
+    let numNode;
+    if (!prep || readOnly) numNode = el("span", { class: "header-label", text: "SÉQ " + seq.id });
+    else if (editingSeq === seq.id) numNode = seqNumEditor(seq);
+    else numNode = el("button", { class: "seq-num", type: "button", title: "Changer le numéro de la séquence", onclick: () => { saveNow(); editingSeq = seq.id; seqError = ""; focusSel = "#seqNumInput"; render(); } },
+      "SÉQ ", el("b", { text: String(seq.id) }), el("span", { class: "pen", text: "✎" }));
+    wrap.append(el("div", { class: "seq-block", "data-seq": seq.id },
+      el("div", { class: "acc-header acc-seq" },
+        el("div", { class: "acc-top" },
+          numNode,
+          el("button", { class: "acc-toggle", type: "button", "aria-expanded": String(open), onclick: () => { open ? openSeqs.delete(seq.id) : openSeqs.add(seq.id); render(); } },
+            el("span", { class: "seq-meta", text: plans.length + " plan" + (plans.length > 1 ? "s" : "") + (nTakes ? " · " + nTakes + " prise" + (nTakes > 1 ? "s" : "") : "") }),
+            el("span", { class: "chevron", text: open ? "▼" : "▶" })),
+          prep && !readOnly ? el("button", { class: "btn-icon", type: "button", title: "Supprimer la séquence", text: "❌", onclick: () => deleteSeq(seq.id) }) : null),
+        editingSeq === seq.id && seqError ? el("div", { class: "seq-error", text: seqError }) : null,
+        prep ? textField(seq, "info", "Infos Séquence (Lieu, personnages...)", true) : (seq.info ? el("div", { class: "plan-info-ro", text: seq.info }) : null)),
+      open ? el("div", { class: "seq-content" },
+        plans.length ? plans.map(renderPlanBlock) : el("div", { class: "empty", text: "Aucun plan. Glissez ici le bouton « Plan »." })) : null));
+  });
+  return wrap;
+}
+
+function seqNumEditor(seq) {
+  let done = false;
+  const apply = (value) => { if (done) return; done = true; applySeqNum(seq.id, value); };
+  return el("label", { class: "seq-num-edit" }, "SÉQ ",
+    el("input", { id: "seqNumInput", type: "number", inputmode: "numeric", min: "1", value: String(seq.id), "aria-label": "Nouveau numéro de la séquence " + seq.id,
+      onkeydown: (e) => {
+        if (e.key === "Enter") { e.preventDefault(); apply(e.target.value); }
+        if (e.key === "Escape") { done = true; editingSeq = null; seqError = ""; render(); }
+      },
+      onblur: (e) => apply(e.target.value) }));
+}
+
+async function applySeqNum(oldId, str) {
+  const newId = parseInt(str, 10);
+  if (newId === oldId) { editingSeq = null; seqError = ""; return render(); }
+  if (isNaN(newId) || newId <= 0) { seqError = "Numéro invalide."; focusSel = "#seqNumInput"; return render(); }
+  if (state.sequences.some((s) => s.id === newId)) { seqError = "La séquence " + newId + " existe déjà."; focusSel = "#seqNumInput"; return render(); }
+  editingSeq = null; seqError = "";
+  if (!(await confirmRenumber(hasTakes((t) => t.seqId === oldId)))) return render();
+  state.sequences.find((s) => s.id === oldId).id = newId;
+  state.plans.filter((p) => p.seqId === oldId).forEach((p) => { p.seqId = newId; });
+  state.takes.filter((t) => t.seqId === oldId).forEach((t) => { t.seqId = newId; });
+  state.tournageList.filter((i) => i.type === "plan" && i.seqId === oldId).forEach((i) => { i.seqId = newId; });
+  if (openSeqs.delete(oldId)) openSeqs.add(newId);
+  if (activeSeq === oldId) activeSeq = newId;
+  flashSel = `.seq-block[data-seq="${newId}"] .acc-seq`;
+  scrollSel = `.seq-block[data-seq="${newId}"]`;
+  toast("Séquence " + oldId + " → " + newId + " (rangée à sa place)");
+  commit();
+}
+
+function renderPlanBlock(p) {
+  const prep = mode === "prep";
+  const takes = takesOf(p.seqId, p.id);
+  const isActive = !prep && activeSeq === p.seqId && activePlan === p.id;
+  return el("div", { class: "plan-block", "data-seq": p.seqId, "data-plan": p.id },
+    el("div", { class: "acc-header acc-plan" + (p.impro ? " impro" : "") + (isActive ? " active" : "") },
+      el("div", { class: "acc-top" },
+        el(prep ? "div" : "button", { class: "acc-title", type: prep ? null : "button", onclick: prep ? null : () => activatePlan(p.seqId, p.id) },
+          el("span", { class: "header-label", text: "PLAN " + p.id + (p.impro ? " (IMPRO)" : "") }),
+          takes.length ? takeDots(takes) : null),
+        el("div", { class: "inline-actions" },
+          prep && !readOnly && !p.video ? el("button", { class: "btn-icon btn-video", type: "button", title: "Ajouter une vidéo de référence (Google Drive)", text: "🎞️", onclick: () => pickVideo(p) }) : null,
+          prep && !readOnly ? el("button", { class: "btn-icon", type: "button", title: "Supprimer le plan", text: "❌", onclick: () => deletePlan(p.seqId, p.id) }) : null)),
+      p.video ? videoChip(p) : null,
+      prep ? textField(p, "info", "Découpage technique (Valeur, action...)", true) : el("div", { class: "plan-info-ro", text: p.info || "…" })),
+    isActive ? renderTakeList(p.seqId, p.id) : null);
+}
+
+function takeDots(takes) {
+  return el("span", { class: "take-dots", title: takes.length + " prise(s)" }, takes.map((t) => el("i", { class: avisClass(t.avis) })));
+}
+
+function renderTakeList(seqId, planId) {
+  const list = el("div", { class: "take-list" });
+  const takes = takesOf(seqId, planId);
+  if (takes.length === 0) list.append(el("div", { class: "empty", text: "Prêt à tourner…" }));
+  takes.forEach((take) => {
+    list.append(el("div", { class: "take-item " + avisClass(take.avis) },
+      el("div", {},
+        el("strong", { text: "Prise " + take.prise }), " | " + take.avis,
+        take.com ? el("div", { class: "take-com", text: take.com }) : null),
+      readOnly ? null : el("button", { class: "btn-delete", type: "button", text: "❌", title: "Supprimer la prise", "aria-label": "Supprimer la prise " + take.prise, onclick: () => deleteTake(take) })));
+  });
+  return list;
+}
+
+// Préparation : plan de travail (ordre de tournage modifiable)
+function renderTravail() {
+  const q = parseQuery(search);
+  const list = el("div", { class: "tournage-list" });
+  // Durée de chaque bloc séparé (somme des temps jusqu'au séparateur suivant)
+  const sepTotals = {};
+  let cur = null;
+  state.tournageList.forEach((i, idx) => {
+    if (i.type === "sep") { cur = idx; sepTotals[idx] = 0; }
+    else if (cur !== null) { const p = findPlan(i.seqId, i.planId); if (p) sepTotals[cur] += minutesOf(p.temps); }
+  });
+  let shown = 0, total = 0;
+  state.tournageList.forEach((item, index) => {
+    let node;
+    if (item.type === "plan") {
+      const p = findPlan(item.seqId, item.planId);
+      if (!p) return;
+      total++;
+      if (!matches(p, q)) return;
+      shown++;
+      const count = takesOf(p.seqId, p.id).length;
+      node = el("div", { class: "tournage-item" + (p.impro ? " impro" : ""), "data-index": index, "data-key": p.seqId + "." + p.id },
+        el("div", { class: "tournage-row" },
+          readOnly ? null : el("button", { class: "drag-handle", type: "button", title: "Glisser pour déplacer", "aria-label": "Déplacer le plan " + p.seqId + "." + p.id, text: "☰",
+            onpointerdown: (e) => beginDrag(e, "move", { from: index, label: "SÉQ " + p.seqId + " - P " + p.id }) }),
+          el("span", { class: "t-open" },
+            el("span", { class: "t-code", text: "SÉQ " + p.seqId + " - P " + p.id }),
+            el("span", { class: "t-info", text: p.info || "..." })),
+          p.video ? el("button", { class: "btn-icon", type: "button", title: "Vidéo de référence", text: "🎞️", onclick: () => previewVideo(p) }) : null,
+          readOnly ? el("span", { class: "t-temps-ro", text: p.temps || "" })
+            : el("input", { class: "header-input t-temps", type: "text", placeholder: "Temps...", value: p.temps || "", "aria-label": "Temps",
+              oninput: (e) => { p.temps = e.target.value; saveSoon(); }, onchange: () => { saveNow(); render(); } }),
+          count ? takeDots(takesOf(p.seqId, p.id)) : null));
+    } else {
+      node = el("div", { class: "tournage-item tournage-sep", "data-index": index },
+        el("div", { class: "tournage-row" },
+          readOnly ? null : el("button", { class: "drag-handle", type: "button", title: "Glisser pour déplacer", "aria-label": "Déplacer le séparateur", text: "☰",
+            onpointerdown: (e) => beginDrag(e, "move", { from: index, label: item.text || "Séparateur" }) }),
+          readOnly ? el("span", { class: "t-info", text: item.text || "" })
+            : el("input", { class: "header-input", type: "text", placeholder: "Ex : Lundi matin, décor…", value: item.text || "", "aria-label": "Texte du séparateur",
+              oninput: (e) => { item.text = e.target.value; saveSoon(); }, onchange: saveNow }),
+          sepTotals[index] ? el("span", { class: "sep-total", text: "≈ " + fmtMin(sepTotals[index]) }) : null,
+          readOnly ? null : el("button", { class: "btn-icon", type: "button", title: "Supprimer le séparateur", text: "❌", onclick: () => deleteGlobalSep(index) })));
+    }
+    list.append(node);
+  });
+  $("searchCount").textContent = q ? shown + " / " + total + " plans" : total + " plans";
+  if (q && !shown) list.append(el("div", { class: "empty", text: "Aucun plan ne correspond à « " + search + " »." }));
+  return list;
+}
+
+// Tournage : ordre de tournage (lecture), appui = plan actif, placé sur la dernière prise
+function renderShootList() {
+  const q = parseQuery(search);
+  const last = lastTake();
+  const list = el("div", { class: "tournage-list" });
+  let shown = 0, total = 0;
+  state.tournageList.forEach((item, index) => {
+    if (item.type === "sep") {
+      list.append(el("div", { class: "tournage-item tournage-sep", "data-index": index },
+        el("div", { class: "tournage-row" }, el("span", { class: "sep-label", text: "📅" }), el("span", { class: "t-info", text: item.text || "Séparateur" }))));
+      return;
+    }
+    const p = findPlan(item.seqId, item.planId);
+    if (!p) return;
+    total++;
+    if (!matches(p, q)) return;
+    shown++;
+    const takes = takesOf(p.seqId, p.id);
+    const isActive = activeSeq === p.seqId && activePlan === p.id;
+    const isLast = last && last.seqId === p.seqId && last.planId === p.id;
+    list.append(el("div", { class: "tournage-item" + (isActive ? " active" : "") + (p.impro ? " impro" : "") + (takes.length ? " done" : ""), "data-index": index, "data-key": p.seqId + "." + p.id },
+      isLast ? el("div", { class: "last-marker", text: "📍 Dernière prise : n° " + last.prise + " · " + last.avis }) : null,
+      el("div", { class: "tournage-row" },
+        el("button", { class: "t-open", type: "button", title: "Tourner ce plan", onclick: () => activatePlan(p.seqId, p.id) },
+          el("span", { class: "t-code", text: "SÉQ " + p.seqId + " - P " + p.id + (p.impro ? " ⚡" : "") }),
+          el("span", { class: "t-info", text: p.info || "..." })),
+        p.video ? el("button", { class: "btn-icon", type: "button", title: "Vidéo de référence", text: "🎞️", onclick: () => previewVideo(p) }) : null,
+        p.temps ? el("span", { class: "t-temps-ro", text: p.temps }) : null,
+        takes.length ? takeDots(takes) : null),
+      isActive ? el("div", { class: "shoot-takes" }, renderTakeList(p.seqId, p.id)) : null));
+  });
+  $("searchCount").textContent = q ? shown + " / " + total + " plans" : total + " plans";
+  return list;
+}
+
+function updateDashboard() {
+  const board = $("statusBoard");
+  const controls = $("takeControls");
+  const p = activeSeq !== null ? findPlan(activeSeq, activePlan) : null;
+  if (p) {
+    const n = nextTakeNum(p.seqId, p.id);
+    board.className = "status-board" + (p.impro ? " impro" : "");
+    board.replaceChildren("SÉQ " + p.seqId + " | PLAN " + p.id + (p.impro ? " ⚡" : "") + " | ", el("span", { class: "take-num", text: "PRISE " + n }));
+    controls.hidden = false;
+    $("btnClap").textContent = "🎬 Clap · prise " + n;
+    $("btnRef").hidden = !p.video;
+    $("com").hidden = readOnly;
+    document.querySelectorAll(".avis-btn").forEach((b) => { b.disabled = readOnly; });
+  } else {
+    board.className = "status-board inactive";
+    board.textContent = "SÉLECTIONNEZ UN PLAN DANS LA LISTE";
+    controls.hidden = true;
+  }
+}
+
+// --- BOUTONS FLOTTANTS ---
+let dockKey = "";
+function renderDock() {
+  const ctx = readOnly ? "ro" : mode === "prep" ? prepView : "shoot";
+  if (ctx === dockKey) return;   // ne pas reconstruire pendant un glisser
+  dockKey = ctx;
+  const B = (kind, icon, label, title) => el("button", { class: "dock-btn " + kind, type: "button", title, "aria-label": title,
+    onpointerdown: kind === "locate" ? null : (e) => beginDrag(e, kind, { label: "+ " + label }),
+    onclick: kind === "locate" ? () => scrollToLast() : null },
+    el("span", { class: "disc", text: icon }), el("small", { text: label }));
+  const dock = $("dock");
+  if (ctx === "ro") dock.replaceChildren();
+  else if (ctx === "decoupage") dock.replaceChildren(
+    B("seq", "📁", "Séquence", "Nouvelle séquence : maintenir et glisser entre deux séquences"),
+    B("plan", "🎬", "Plan", "Nouveau plan : maintenir et glisser entre deux plans ou sur une séquence"));
+  else if (ctx === "travail") dock.replaceChildren(
+    B("sep", "📅", "Séparateur", "Nouveau séparateur : maintenir et glisser entre deux plans"));
+  else dock.replaceChildren(
+    B("locate", "📍", "Où j'en suis", "Revenir à la dernière prise"),
+    B("impro", "⚡", "Impro", "Plan improvisé : glisser à l'endroit où il sera tourné, ou appuyer pour l'ajouter après le plan en cours"));
+}
+
+// --- GLISSER (boutons flottants et poignées ☰) ---
+// Un seul moteur : on suit le doigt / la souris, on calcule la cible sous le pointeur,
+// une ligne indique l'endroit et ce qui sera créé ; lâcher = créer ou déplacer.
+let drag = null;
+function beginDrag(e, kind, extra) {
+  if (readOnly || (e.button !== undefined && e.button !== 0)) return;
+  e.preventDefault();
+  saveNow();
+  drag = { kind, extra, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, hoverSeq: null, hoverTimer: null, raf: null, armed: kind === "move" };
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+  window.addEventListener("pointermove", onDragMove);
+  window.addEventListener("pointerup", onDragEnd);
+  window.addEventListener("pointercancel", onDragEnd);
+}
+function onDragMove(e) {
+  if (!drag) return;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.moved) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 8) return;
+    drag.moved = true;
+    document.body.classList.add("dragging");
+    drag.ghost = el("div", { class: "drag-ghost", text: drag.extra.label });
+    drag.line = el("div", { class: "drop-line" }, el("span"));
+    document.body.append(drag.ghost, drag.line);
+    if (drag.kind === "move") { const n = document.querySelector(`.tournage-item[data-index="${drag.extra.from}"]`); if (n) n.classList.add("moving"); }
+    autoScrollLoop();
+  }
+  e.preventDefault();
+  drag.ghost.style.left = e.clientX + "px";
+  drag.ghost.style.top = (e.clientY - 18) + "px";
+  findTarget();
+}
+function scroller() { return isDesktop() ? $("rightPanel") : document.scrollingElement; }
+function autoScrollLoop() {
+  if (!drag) return;
+  const sc = scroller();
+  const r = isDesktop() ? sc.getBoundingClientRect() : { top: 0, bottom: window.innerHeight };
+  const topEdge = r.top + (mode === "shoot" && !isDesktop() ? $("dashboard").offsetHeight : 0) + 70;
+  // Les boutons flottants sont en bas : le défilement vers le bas ne s'active qu'une fois le doigt remonté
+  if (drag.y < r.bottom - 160) drag.armed = true;
+  let d = 0;
+  if (drag.y < topEdge) d = -Math.min(22, (topEdge - drag.y) / 3 + 4);
+  else if (drag.armed && drag.y > r.bottom - 90) d = Math.min(22, (drag.y - (r.bottom - 90)) / 3 + 4);
+  if (d) { sc.scrollTop += d; findTarget(); }
+  drag.raf = requestAnimationFrame(autoScrollLoop);
+}
+function clearInto() { document.querySelectorAll(".drop-into").forEach((n) => n.classList.remove("drop-into")); }
+function showLine(rect, before, label) {
+  const y = before ? rect.top - 6 : rect.bottom + 2;
+  Object.assign(drag.line.style, { display: "block", top: y + "px", left: rect.left + "px", width: rect.width + "px" });
+  drag.line.firstChild.textContent = label;
+}
+function hideLine() { if (drag && drag.line) drag.line.style.display = "none"; }
+
+function findTarget() {
+  const { kind, x, y } = drag;
+  const under = document.elementFromPoint(x, y);
+  drag.target = null;
+  clearInto();
+  if (!under) return hideLine();
+  const inShootList = mode === "shoot" && shootView === "tournage";
+  if (kind === "seq") {
+    const sb = under.closest(".seq-block");
+    const seqs = seqsSorted();
+    if (!sb) {
+      // Sous la dernière séquence : à la fin
+      const lastB = [...document.querySelectorAll(".seq-block")].pop();
+      if (lastB && y > lastB.getBoundingClientRect().bottom && under.closest("#rightPanel, .app-container")) {
+        const a = seqs.length ? seqs[seqs.length - 1].id : 0;
+        drag.target = { a, b: null };
+        return showLine(lastB.getBoundingClientRect(), false, seqLabel(a, null));
+      }
+      return hideLine();
+    }
+    const id = +sb.dataset.seq, r = sb.getBoundingClientRect(), before = y < r.top + Math.min(r.height / 2, 60);
+    const i = seqs.findIndex((s) => s.id === id);
+    const a = before ? (i > 0 ? seqs[i - 1].id : 0) : id;
+    const b = before ? id : (seqs[i + 1] ? seqs[i + 1].id : null);
+    drag.target = { a, b };
+    return showLine(r, before, seqLabel(a, b));
+  }
+  if (kind === "plan" || (kind === "impro" && !inShootList)) {
+    const pb = under.closest(".plan-block");
+    if (pb) {
+      const seqId = +pb.dataset.seq, id = +pb.dataset.plan, r = pb.getBoundingClientRect(), before = y < r.top + r.height / 2;
+      if (kind === "impro") { drag.target = { seqId }; return showLine(r, before, improLabel(seqId)); }
+      const plans = plansOfSeq(seqId), i = plans.findIndex((p) => p.id === id);
+      const a = before ? (i > 0 ? plans[i - 1].id : 0) : id;
+      const b = before ? id : (plans[i + 1] ? plans[i + 1].id : null);
+      drag.target = { seqId, a, b };
+      return showLine(r, before, planLabel(seqId, a, b));
+    }
+    const sb = under.closest(".seq-block");
+    if (sb) {
+      const seqId = +sb.dataset.seq;
+      // Séquence fermée : on la dépose à la fin, et elle s'ouvre si on attend un instant dessus
+      if (!openSeqs.has(seqId) && drag.hoverSeq !== seqId) {
+        clearTimeout(drag.hoverTimer);
+        drag.hoverSeq = seqId;
+        drag.hoverTimer = setTimeout(() => { if (drag && drag.hoverSeq === seqId) { openSeqs.add(seqId); render(); findTarget(); } }, 650);
+      }
+      const plans = plansOfSeq(seqId);
+      sb.querySelector(".acc-seq").classList.add("drop-into");
+      drag.target = kind === "impro" ? { seqId } : { seqId, a: plans.length ? plans[plans.length - 1].id : 0, b: null };
+      return showLine(sb.getBoundingClientRect(), false, kind === "impro" ? improLabel(seqId) : planLabel(seqId, drag.target.a, null) + " (fin de séquence)");
+    }
+    return hideLine();
+  }
+  // Listes dans l'ordre de tournage : séparateur, déplacement, impro
+  const ti = under.closest(".tournage-item");
+  if (!ti) return hideLine();
+  const index = +ti.dataset.index, r = ti.getBoundingClientRect(), before = y < r.top + r.height / 2;
+  const at = before ? index : index + 1;
+  if (kind === "move") {
+    const from = drag.extra.from;
+    if (at === from || at === from + 1) { drag.target = null; return hideLine(); }
+    drag.target = { at };
+    return showLine(r, before, "Déplacer ici");
+  }
+  drag.target = { at };
+  return showLine(r, before, kind === "sep" ? "Séparateur ici" : "Impro tournée ici");
+}
+function seqLabel(a, b) { const id = (a || 0) + 1; return "Séquence " + id + (b !== null && id >= b ? " · suivantes +1" : ""); }
+function planLabel(seqId, a, b) { const id = (a || 0) + 1; return "Plan " + seqId + "." + id + (b !== null && id >= b ? " · suivants +1" : ""); }
+function improLabel(seqId) { return "Impro " + seqId + "." + (plansOfSeq(seqId).reduce((m, p) => Math.max(m, p.id), 0) + 1) + " (fin de séquence)"; }
+
+function onDragEnd(e) {
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  window.removeEventListener("pointermove", onDragMove);
+  window.removeEventListener("pointerup", onDragEnd);
+  window.removeEventListener("pointercancel", onDragEnd);
+  cancelAnimationFrame(d.raf);
+  clearTimeout(d.hoverTimer);
+  document.body.classList.remove("dragging");
+  clearInto();
+  if (d.ghost) d.ghost.remove();
+  if (d.line) d.line.remove();
+  document.querySelectorAll(".moving").forEach((n) => n.classList.remove("moving"));
+  if (e.type === "pointercancel") return;
+  if (!d.moved) return tapAction(d.kind);
+  if (!d.target) return;
+  if (d.kind === "seq") insertSeqAt(d.target.a, d.target.b);
+  else if (d.kind === "plan") insertPlanAt(d.target.seqId, d.target.a, d.target.b);
+  else if (d.kind === "sep") insertSepAt(d.target.at);
+  else if (d.kind === "move") moveTournageItem(d.extra.from, d.target.at);
+  else if (d.kind === "impro") improDialog(d.target.seqId, d.target.at);
+}
+// Un simple appui (sans glisser) : création à un endroit par défaut + rappel du geste
+function tapAction(kind) {
+  if (kind === "seq") { const s = seqsSorted(); insertSeqAt(s.length ? s[s.length - 1].id : 0, null); toast("Séquence ajoutée à la fin. Pour la placer ailleurs : maintenir le bouton et glisser."); }
+  else if (kind === "plan") {
+    const opened = seqsSorted().filter((s) => openSeqs.has(s.id));
+    const s = opened.length ? opened[opened.length - 1] : seqsSorted().pop();
+    if (!s) return toast("Créez d'abord une séquence.");
+    const plans = plansOfSeq(s.id);
+    insertPlanAt(s.id, plans.length ? plans[plans.length - 1].id : 0, null);
+    toast("Plan ajouté en fin de séquence " + s.id + ". Pour choisir l'endroit : maintenir le bouton et glisser.");
+  }
+  else if (kind === "sep") { insertSepAt(state.tournageList.length); toast("Séparateur ajouté à la fin. Maintenir et glisser pour le placer entre deux plans."); }
+  else if (kind === "impro") improDialog(activeSeq, null);
+}
+
+// Numéro libre : précédent + 1 ; s'il est pris, on décale seulement la suite continue (un trou arrête le décalage)
+function contiguousFrom(ids, start) { const run = []; for (let n = start; ids.includes(n); n++) run.push(n); return run; }
+
+async function insertSeqAt(a, b) {
+  const id = (a || 0) + 1;
+  const run = contiguousFrom(state.sequences.map((s) => s.id), id);
+  if (run.length && !(await confirmRenumber(hasTakes((t) => run.includes(t.seqId))))) return;
+  [...run].reverse().forEach((n) => {
+    state.sequences.find((s) => s.id === n).id = n + 1;
+    state.plans.filter((p) => p.seqId === n).forEach((p) => { p.seqId = n + 1; });
+    state.takes.filter((t) => t.seqId === n).forEach((t) => { t.seqId = n + 1; });
+    state.tournageList.forEach((i) => { if (i.type === "plan" && i.seqId === n) i.seqId = n + 1; });
+    if (openSeqs.delete(n)) openSeqs.add(n + 1);
+    if (activeSeq === n) activeSeq = n + 1;
+  });
+  state.sequences.push({ id, info: "" });
+  openSeqs.add(id);
+  flashSel = `.seq-block[data-seq="${id}"] .acc-seq`;
+  focusSel = `.seq-block[data-seq="${id}"] textarea`;
+  if (run.length) toast("Séquence " + id + " créée · " + run.length + " séquence(s) décalée(s)");
+  commit();
+}
+
+async function insertPlanAt(seqId, a, b) {
+  const id = (a || 0) + 1;
+  const run = contiguousFrom(plansOfSeq(seqId).map((p) => p.id), id);
+  if (run.length && !(await confirmRenumber(hasTakes((t) => t.seqId === seqId && run.includes(t.planId))))) return;
+  [...run].reverse().forEach((n) => {
+    findPlan(seqId, n).id = n + 1;
+    state.takes.filter((t) => t.seqId === seqId && t.planId === n).forEach((t) => { t.planId = n + 1; });
+    state.tournageList.forEach((i) => { if (i.type === "plan" && i.seqId === seqId && i.planId === n) i.planId = n + 1; });
+    if (activeSeq === seqId && activePlan === n) activePlan = n + 1;
+  });
+  state.plans.push({ seqId, id, impro: 0, info: "", temps: "", video: null });
+  // Plan de travail : juste après le plan précédent de la séquence, sinon à la fin
+  const prevIdx = state.tournageList.findIndex((i) => i.type === "plan" && i.seqId === seqId && i.planId === a);
+  state.tournageList.splice(prevIdx === -1 ? state.tournageList.length : prevIdx + 1, 0, { type: "plan", seqId, planId: id });
+  openSeqs.add(seqId);
+  flashSel = `.plan-block[data-seq="${seqId}"][data-plan="${id}"] .acc-plan`;
+  focusSel = `.plan-block[data-seq="${seqId}"][data-plan="${id}"] textarea`;
+  if (run.length) toast("Plan " + seqId + "." + id + " créé · " + run.length + " plan(s) décalé(s)");
+  commit();
+}
+
+function insertSepAt(at) {
+  state.tournageList.splice(at, 0, { type: "sep", text: "" });
+  flashSel = `.tournage-item[data-index="${at}"]`;
+  focusSel = `.tournage-item[data-index="${at}"] input`;
+  commit();
+}
+
+function moveTournageItem(from, at) {
+  if (readOnly) return;
+  const item = state.tournageList.splice(from, 1)[0];
+  const to = at > from ? at - 1 : at;
+  state.tournageList.splice(to, 0, item);
+  flashSel = `.tournage-item[data-index="${to}"]`;
+  commit();
+}
+
+// Plan improvisé : numéro = fin de sa séquence (les numéros connus de l'équipe ne bougent pas),
+// placé dans l'ordre de tournage là où on l'a lâché (ou juste après le plan en cours)
+function improDialog(defaultSeq, at) {
+  const seqs = seqsSorted();
+  if (!seqs.length) return toast("Créez d'abord une séquence.");
+  if (defaultSeq === null || defaultSeq === undefined) {
+    // Séquence du plan juste au-dessus de l'endroit choisi
+    const above = at !== null ? state.tournageList.slice(0, at).reverse().find((i) => i.type === "plan") : null;
+    defaultSeq = above ? above.seqId : (activeSeq !== null ? activeSeq : seqs[0].id);
+  }
+  let seqId = defaultSeq;
+  openModal("⚡ Plan improvisé", (close) => {
+    const chips = el("div", { class: "chips" });
+    const info = el("p");
+    const desc = el("input", { type: "text", placeholder: "Ce qu'on tourne (facultatif)", "aria-label": "Description du plan improvisé" });
+    const go = el("button", { class: "btn-m impro", type: "button" });
+    const refresh = () => {
+      chips.replaceChildren(...seqs.map((s) => el("button", { class: "chip-btn" + (s.id === seqId ? " on" : ""), type: "button", text: "SÉQ " + s.id, onclick: () => { seqId = s.id; refresh(); } })));
+      const n = seqId + "." + (plansOfSeq(seqId).reduce((m, p) => Math.max(m, p.id), 0) + 1);
+      info.textContent = "Il sera numéroté " + n + " (à la fin de la séquence " + seqId + ") : les autres plans gardent leur numéro.";
+      go.textContent = "Créer " + n + " et le tourner";
+    };
+    go.addEventListener("click", () => {
+      const id = plansOfSeq(seqId).reduce((m, p) => Math.max(m, p.id), 0) + 1;
+      state.plans.push({ seqId, id, impro: 1, info: desc.value.trim(), temps: "", video: null });
+      let pos = at;
+      if (pos === null || pos === undefined) {
+        const cur = state.tournageList.findIndex((i) => i.type === "plan" && i.seqId === activeSeq && i.planId === activePlan);
+        pos = cur === -1 ? state.tournageList.length : cur + 1;
+      }
+      state.tournageList.splice(pos, 0, { type: "plan", seqId, planId: id });
+      activeSeq = seqId; activePlan = id;
+      openSeqs.add(seqId);
+      scrollSel = shootView === "tournage" ? `.tournage-item[data-key="${seqId}.${id}"]` : `.plan-block[data-seq="${seqId}"][data-plan="${id}"]`;
+      flashSel = scrollSel;
+      close();
+      commit();
+      toast("Plan impro " + seqId + "." + id + " créé, prêt à tourner");
+    });
+    refresh();
+    return [el("p", { text: "Séquence :" }), chips, info, desc,
+      el("div", { class: "modal-actions" }, el("button", { class: "btn-m", type: "button", text: "Annuler", onclick: close }), go)];
+  });
+}
+
+// --- NAVIGATION ---
+function activatePlan(seqId, planId) {
+  saveNow();
+  const same = activeSeq === seqId && activePlan === planId;
+  activeSeq = same ? null : seqId;
+  activePlan = same ? null : planId;
+  render();
+}
+function setMode(m) {
+  saveNow();
+  mode = m;
+  searchOpen = false; search = ""; $("searchInput").value = "";
+  if (m === "shoot" && activeSeq === null) {
+    const last = lastTake();
+    const first = state.tournageList.find((i) => i.type === "plan");
+    const k = last || (first && { seqId: first.seqId, planId: first.planId });
+    if (k) { activeSeq = k.seqId; activePlan = k.planId; openSeqs.add(k.seqId); }
+  }
+  render();
+  if (m === "shoot") scrollToLast();
+  else window.scrollTo(0, 0);
+}
+function lastTake() {
+  return state.takes.reduce((best, t) => (!best || (t.timestamp || "") > (best.timestamp || "") ? t : best), null);
+}
+// Se placer sur le plan actif, sinon sur la dernière prise
+function scrollToLast() {
+  const last = lastTake();
+  const k = activeSeq !== null ? { seqId: activeSeq, planId: activePlan } : last;
+  if (!k) return;
+  if (shootView === "scenario") openSeqs.add(k.seqId);
+  scrollSel = shootView === "tournage" ? `.tournage-item[data-key="${k.seqId}.${k.planId}"]` : `.plan-block[data-seq="${k.seqId}"][data-plan="${k.planId}"]`;
+  flashSel = scrollSel;
+  render();
+}
+
+// --- SUPPRESSIONS ---
+async function deleteSeq(seqId) {
+  if (readOnly || !(await ask("Supprimer la séquence " + seqId + " ?", "Tous ses plans et leurs prises seront effacés.", "Supprimer", true))) return;
+  state.sequences = state.sequences.filter((s) => s.id !== seqId);
+  state.plans = state.plans.filter((p) => p.seqId !== seqId);
+  state.takes = state.takes.filter((t) => t.seqId !== seqId);
+  state.tournageList = state.tournageList.filter((i) => !(i.type === "plan" && i.seqId === seqId));
+  commit();
+}
+async function deletePlan(seqId, planId) {
+  if (readOnly || !(await ask("Supprimer le plan " + seqId + "." + planId + " ?", "Ses prises seront effacées. Les autres plans gardent leur numéro.", "Supprimer", true))) return;
+  state.plans = state.plans.filter((p) => !(p.seqId === seqId && p.id === planId));
+  state.takes = state.takes.filter((t) => !(t.seqId === seqId && t.planId === planId));
+  state.tournageList = state.tournageList.filter((i) => !(i.type === "plan" && i.seqId === seqId && i.planId === planId));
+  commit();
+}
+function deleteGlobalSep(index) {
+  if (readOnly) return;
+  const removed = state.tournageList.splice(index, 1)[0];
+  commit();
+  toast("Séparateur supprimé", () => { state.tournageList.splice(index, 0, removed); commit(); });
+}
+async function deleteTake(take) {
+  if (readOnly || !(await ask("Supprimer la prise " + take.prise + " ?", "Les autres prises gardent leur numéro (leur clap a déjà été joué).", "Supprimer", true))) return;
+  state.takes = state.takes.filter((t) => t.uid !== take.uid);
+  commit();
+}
+
+// --- PRISES ---
+function saveTake(avis) {
+  const p = activeSeq !== null ? findPlan(activeSeq, activePlan) : null;
+  if (readOnly || !p) return;
+  saveNow();
+  const com = $("com");
+  const take = { uid: newUid(), seqId: p.seqId, planId: p.id, prise: nextTakeNum(p.seqId, p.id), avis, com: com.value.trim(), timestamp: new Date().toISOString() };
+  state.takes.push(take);
+  com.value = "";
+  commit();
+  toast("Prise " + take.prise + " enregistrée · " + avis, () => { state.takes = state.takes.filter((t) => t.uid !== take.uid); com.value = take.com; commit(); });
+}
+
+// --- PDF (impression du navigateur) ---
+function exportPDF(kind) {
+  saveNow();
+  const area = $("printArea");
+  const date = new Date().toLocaleDateString("fr-FR");
+  const head = (title) => [
+    el("div", { class: "print-title", text: title }),
+    el("div", { class: "print-subtitle" }, "PROJET : ", el("strong", { text: projectName() }), " | ÉDITÉ LE : " + date)];
+  const table = (cols) => {
+    const body = el("tbody");
+    return { body, node: el("table", {}, el("thead", {}, el("tr", {}, cols.map(([t, w]) => el("th", { text: t, style: w ? "width:" + w : null })))), body) };
+  };
+  if (kind === "tournage") {
+    const t = table([["SÉQ - PLAN", "12%"], ["DESCRIPTION / DÉCOUPAGE"], ["TEMPS", "12%"]]);
+    state.tournageList.forEach((i) => {
+      if (i.type === "sep") t.body.append(el("tr", {}, el("td", { colspan: 3, class: "print-sep-row", text: "--- " + (i.text || "SÉPARATEUR") + " ---" })));
+      else {
+        const p = findPlan(i.seqId, i.planId);
+        if (p) t.body.append(el("tr", {},
+          el("td", {}, el("strong", { text: "S" + p.seqId + " - P" + p.id }), p.impro ? el("div", {}, el("i", { text: "(Impro)" })) : null),
+          el("td", { text: p.info || "" }), el("td", { text: p.temps || "" })));
+      }
+    });
+    area.replaceChildren(...head("Plan de tournage / Feuille de service"), t.node);
+  } else {
+    const t = table([["SÉQ", "6%"], ["PLAN", "6%"], ["DESCRIPTION / DÉCOUPAGE"]]);
+    seqsSorted().forEach((seq) => {
+      t.body.append(el("tr", { class: "print-seq-row" },
+        el("td", {}, el("span", { class: "print-seq-num", text: String(seq.id) })), el("td"),
+        el("td", {}, el("span", { class: "print-seq-info", text: seq.info || "" }))));
+      plansOfSeq(seq.id).forEach((p) => {
+        t.body.append(el("tr", {}, el("td"),
+          el("td", {}, el("strong", { text: String(p.id) }), p.impro ? el("div", {}, el("i", { text: "(Impro)" })) : null),
+          el("td", { text: p.info || "" })));
+      });
+    });
+    area.replaceChildren(...head("Découpage technique"), t.node);
+  }
+  window.print();
+}
+
+// --- ÉVÉNEMENTS FIXES ---
+$("avisRow").append(...AVIS_BUTTONS.map((a) => el("button", { class: "avis-btn " + avisClass(a.label), type: "button", title: a.label + " : enregistrer la prise", onclick: () => saveTake(a.label) },
+  el("span", { text: a.e }), el("b", { text: a.s }))));
+$("btnClap").addEventListener("click", () => { if (activeSeq !== null) clapper.play(activeSeq, activePlan, nextTakeNum(activeSeq, activePlan)); });
+$("btnRef").addEventListener("click", () => { const p = findPlan(activeSeq, activePlan); if (p && p.video) previewVideo(p); });
+$("btnPdfTournage").addEventListener("click", () => exportPDF("tournage"));
+$("btnPdfDecoupage").addEventListener("click", () => exportPDF("decoupage"));
+$("btnModePrep").addEventListener("click", () => setMode("prep"));
+$("btnModeShoot").addEventListener("click", () => setMode("shoot"));
+$("btnSearch").addEventListener("click", () => {
+  searchOpen = !searchOpen;
+  if (!searchOpen) { search = ""; $("searchInput").value = ""; }
+  render();
+  if (searchOpen) $("searchInput").focus();
+});
+$("searchInput").addEventListener("input", (e) => { search = e.target.value; render(); });
+
+// Une mise à jour venue d'ailleurs ne remplace pas le champ en cours de saisie
+function isTyping() {
+  const a = document.activeElement;
+  return !!(a && a.classList && a.classList.contains("header-input"));
+}
+document.addEventListener("focusout", () => {
+  setTimeout(() => { if (pendingRemote && !isTyping()) { state = pendingRemote; pendingRemote = null; render(); } }, 0);
+});
+OneAppAPI.onDataChange((data) => {
+  clearTimeout(saveTimer); saveTimer = null;
+  const next = normalize(data);
+  if (isTyping() || drag) { pendingRemote = next; return; }
+  state = next;
+  render();
+});
+OneAppAPI.onModeChange((value) => { saveNow(); readOnly = value; render(); });
+OneAppAPI.onNameChange && OneAppAPI.onNameChange(() => render());
+
+OneAppAPI.loadData().then(({ app_data, readOnly: value }) => {
+  state = normalize(app_data);
+  readOnly = value;
+  const first = seqsSorted()[0];
+  if (first) openSeqs.add(first.id);
+  render();
+});
+</script>
+</body>
+</html>
