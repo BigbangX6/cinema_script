@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cinema Script Maquettes v2</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout : en-tête, choix (maquette + taille d'écran), cadre redimensionnable (container queries), notes. Monochrome comme un clap : noir, blanc, craie. */
+:root {
+  --bg: #111214; --surface: #18191c; --raise: #202226; --line: #2c2e33;
+  --fg: #f2f2ef; --muted: #8e9096; --impro: #f0a13a;
+  --slate: #0b0b0b; --chalk: #f4f4ef; --chalk-dim: #97978f; --slate-line: #37372f;
+  --v-master: #f2c14a; --v-ok: #5cc77b; --v-moyen: #c8bb63; --v-bof: #e38b4c; --v-ko: #ec5a50; --v-check: #8e9096;
+  --f-num: "Barlow Condensed", "Arial Narrow", sans-serif;
+  --f-body: "Barlow", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "IBM Plex Mono", ui-monospace, Menlo, monospace;
+  color-scheme: dark;
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg: #f3f3f1; --surface: #ffffff; --raise: #ececea; --line: #d9d9d5;
+    --fg: #141414; --muted: #63656b; --impro: #b45f00;
+    --v-master: #b88a0b; --v-ok: #23914a; --v-moyen: #8a7d1c; --v-bof: #b8611f; --v-ko: #c9362d; --v-check: #6b6d73;
+    color-scheme: light;
+  }
+}
+:root[data-theme="light"] {
+  --bg: #f3f3f1; --surface: #ffffff; --raise: #ececea; --line: #d9d9d5;
+  --fg: #141414; --muted: #63656b; --impro: #b45f00;
+  --v-master: #b88a0b; --v-ok: #23914a; --v-moyen: #8a7d1c; --v-bof: #b8611f; --v-ko: #c9362d; --v-check: #6b6d73;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--fg); font-family: var(--f-body); font-size: 16px; line-height: 1.45; }
+button { font: inherit; color: inherit; cursor: pointer; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--fg); outline-offset: 2px; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 20px; padding-block: 28px 64px; display: grid; gap: 24px; }
+@media (max-width: 520px) { .wrap { padding-inline: 16px; } }
+
+.intro { display: grid; gap: 10px; max-width: 74ch; }
+.eyebrow { font-family: var(--f-mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+h1 { font-family: var(--f-num); font-weight: 700; font-size: clamp(34px, 6vw, 50px); line-height: 1; margin: 0; text-wrap: balance; }
+.intro p { margin: 0; color: var(--muted); }
+.intro ul { margin: 0; padding-left: 18px; color: var(--muted); display: grid; gap: 4px; }
+.intro li strong { color: var(--fg); font-weight: 600; }
+
+.pickers { display: flex; flex-wrap: wrap; gap: 12px 20px; align-items: center; justify-content: space-between; }
+.seg { display: inline-flex; flex-wrap: wrap; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: var(--surface); }
+.seg button { border: 0; background: none; padding: 8px 14px; font-size: 15px; color: var(--muted); }
+.seg button[aria-pressed="true"] { background: var(--fg); color: var(--bg); font-weight: 600; }
+.seg.small button { padding: 6px 12px; font-size: 14px; }
+
+.frame-zone { display: flex; justify-content: center; }
+.frame { container-type: inline-size; width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 14px; overflow: hidden; position: relative; }
+.frame.phone { max-width: 390px; height: 800px; border: 10px solid #26272b; border-radius: 44px; display: flex; flex-direction: column; }
+.frame.pc { max-width: 1180px; min-height: 700px; display: flex; flex-direction: column; }
+@media (max-width: 520px) { .frame.phone { border-width: 1px; border-color: var(--line); border-radius: 16px; height: 780px; } }
+
+.notes { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 24px; border-top: 1px solid var(--line); padding-top: 22px; }
+.notes h2 { font-family: var(--f-num); font-size: 25px; font-weight: 600; margin: 0 0 8px; line-height: 1.1; }
+.notes ul { margin: 0; padding-left: 18px; display: grid; gap: 7px; color: var(--muted); }
+.notes li strong { color: var(--fg); font-weight: 600; }
+kbd { font-family: var(--f-mono); font-size: 11px; padding: 1px 5px; border: 1px solid var(--line); border-bottom-width: 2px; border-radius: 4px; background: var(--raise); color: var(--fg); }
+
+/* ---------- Éléments communs de l'app ---------- */
+.app { flex: 1; min-height: 0; display: flex; flex-direction: column; }
+.topbar { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; }
+.topbar .proj { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0; flex: 1; }
+.sync { font-size: 12.5px; color: var(--muted); display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+.sync::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--v-ok); }
+.iconbtn { border: 1px solid var(--line); background: var(--surface); border-radius: 9px; padding: 6px 11px; font-size: 14px; white-space: nowrap; }
+.scroll { flex: 1; min-height: 0; overflow-y: auto; }
+
+/* Le clap (objet noir, identique en thème clair) */
+.slate { background: var(--slate); color: var(--chalk); border-radius: 10px; overflow: hidden; border: 1px solid #000; }
+.sticks { height: 22px; background: repeating-linear-gradient(-58deg, var(--chalk) 0 18px, var(--slate) 18px 36px); border-bottom: 3px solid var(--slate); box-shadow: 0 1px 0 var(--slate-line); }
+.sl-top { display: flex; justify-content: space-between; gap: 8px; padding: 6px 12px; font-family: var(--f-mono); font-size: 11.5px; letter-spacing: .06em; color: var(--chalk-dim); border-bottom: 1px solid var(--slate-line); }
+.sl-top span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.sl-nums { display: grid; grid-template-columns: 1fr 1fr 1fr; }
+.sl-nums > div { padding: 4px 12px 2px; border-right: 1px solid var(--slate-line); display: grid; }
+.sl-nums > div:last-child { border-right: 0; }
+.sl-nums label { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .14em; color: var(--chalk-dim); }
+.sl-nums b { font-family: var(--f-num); font-weight: 700; font-size: 64px; line-height: .95; font-variant-numeric: tabular-nums; }
+.sl-desc { border-top: 1px solid var(--slate-line); padding: 8px 12px 10px; display: grid; gap: 2px; }
+.sl-desc small { font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .1em; color: var(--chalk-dim); }
+.sl-desc textarea, .sl-desc input { width: 100%; background: transparent; color: var(--chalk); border: 1px solid transparent; border-radius: 6px; padding: 2px 4px; margin-left: -4px; font: inherit; font-size: 15px; resize: none; line-height: 1.35; }
+.sl-desc textarea:focus, .sl-desc input:focus { border-color: var(--slate-line); background: #161614; outline: none; }
+.tag-impro { display: inline-block; font-family: var(--f-mono); font-size: 10.5px; letter-spacing: .08em; color: var(--impro); border: 1px solid currentColor; border-radius: 4px; padding: 0 5px; vertical-align: 2px; }
+
+/* Bouton son : séparé, verrouillé après lecture */
+.btn-sound { width: 100%; border: 0; border-radius: 12px; padding: 14px; background: var(--fg); color: var(--bg); display: grid; justify-items: center; }
+.btn-sound b { font-family: var(--f-num); font-size: 26px; letter-spacing: .05em; line-height: 1.05; }
+.btn-sound span { font-family: var(--f-mono); font-size: 11.5px; opacity: .75; }
+.btn-sound.done { background: var(--surface); color: var(--muted); border: 1px dashed var(--line); }
+.btn-sound.done b { color: var(--v-ok); }
+.btn-sound.armed { background: var(--surface); color: var(--v-ko); border: 2px solid var(--v-ko); }
+
+.lbl { font-family: var(--f-mono); font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.verdicts { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; }
+.verdict { --c: var(--v-check); border: 1px solid var(--line); background: var(--surface); border-radius: 10px; padding: 11px 4px; display: grid; justify-items: center; gap: 1px; font-weight: 600; font-size: 14.5px; }
+.verdict i { font-style: normal; font-size: 19px; line-height: 1.15; }
+.verdict:hover { border-color: var(--c); }
+.verdict:active { background: color-mix(in srgb, var(--c) 22%, var(--surface)); }
+.c-master { --c: var(--v-master); } .c-ok { --c: var(--v-ok); } .c-moyen { --c: var(--v-moyen); }
+.c-bof { --c: var(--v-bof); } .c-ko { --c: var(--v-ko); } .c-check { --c: var(--v-check); }
+.note { width: 100%; border: 1px solid var(--line); background: var(--surface); color: var(--fg); border-radius: 10px; padding: 10px 12px; font: inherit; font-size: 15px; }
+
+.takes { list-style: none; margin: 0; padding: 0; display: grid; }
+.take { display: grid; grid-template-columns: 30px 82px 1fr auto; gap: 8px; align-items: baseline; padding: 7px 2px; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+.take .n { font-family: var(--f-num); font-weight: 700; font-size: 20px; font-variant-numeric: tabular-nums; }
+.take .com { color: var(--muted); min-width: 0; overflow-wrap: anywhere; }
+.take time { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); }
+.take.fresh .n { text-decoration: underline; text-underline-offset: 4px; }
+.pill { --c: var(--v-check); display: inline-flex; align-items: center; gap: 5px; font-size: 13.5px; font-weight: 600; color: var(--c); white-space: nowrap; }
+.pill::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--c); flex: none; }
+.empty { color: var(--muted); font-size: 14.5px; padding: 6px 0; }
+.dots { display: inline-flex; gap: 3px; vertical-align: middle; }
+.dot { --c: var(--v-check); width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+
+.saved { border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; display: grid; gap: 8px; background: var(--surface); }
+.saved p { margin: 0; font-size: 14.5px; }
+.btn-next { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; width: 100%; text-align: left; border: 1px solid var(--fg); background: none; border-radius: 10px; padding: 9px 12px; }
+.btn-next .code { font-family: var(--f-num); font-weight: 700; font-size: 20px; }
+.btn-next .txt { font-size: 14px; color: var(--muted); min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.warn { font-size: 13.5px; color: var(--v-bof); }
+.btn-text { background: none; border: 0; padding: 0; text-decoration: underline; text-underline-offset: 3px; font-size: 14px; }
+
+/* ---------- 1 · Fiche clap ---------- */
+.strip { display: flex; gap: 6px; overflow-x: auto; padding: 10px 14px; border-bottom: 1px solid var(--line); flex: none; scrollbar-width: thin; align-items: center; }
+.strip .chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 8px; padding: 3px 10px; font-family: var(--f-num); font-weight: 600; font-size: 18px; display: inline-flex; align-items: center; gap: 6px; }
+.strip .chip.impro { color: var(--impro); }
+.strip .chip.done::after { content: "✓"; font-family: var(--f-body); font-size: 12px; color: var(--v-ok); }
+.strip .chip[aria-current="true"] { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.strip .daylbl { flex: none; font-family: var(--f-mono); font-size: 10.5px; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; padding-left: 6px; }
+.c1 { padding: 14px; display: grid; gap: 14px; }
+.c1 .col { display: grid; gap: 12px; align-content: start; min-width: 0; }
+@container (min-width: 760px) {
+  .c1 { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); grid-template-areas: "slate shoot" "takes shoot"; gap: 22px; padding: 20px; align-items: start; }
+  .c1 .a-slate { grid-area: slate; } .c1 .a-shoot { grid-area: shoot; } .c1 .a-takes { grid-area: takes; }
+  .c1 .verdicts { grid-template-columns: repeat(6, 1fr); }
+  .c1 .sl-nums b { font-size: 120px; }
+  .c1 .sticks { height: 34px; }
+  .c1 .sl-desc textarea { font-size: 18px; }
+}
+.drawer { position: absolute; inset: 0; background: var(--bg); z-index: 3; display: flex; flex-direction: column; }
+.drawer .scroll { padding: 4px 14px 20px; }
+@container (min-width: 760px) { .drawer { right: auto; width: 420px; border-right: 1px solid var(--line); box-shadow: 20px 0 40px rgba(0,0,0,.3); } }
+
+/* Listes (planning / découpage) */
+.seqhead { padding: 16px 0 6px; display: grid; gap: 2px; border-bottom: 2px solid var(--fg); }
+.seqhead .t { font-family: var(--f-num); font-weight: 700; font-size: 24px; line-height: 1.1; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; }
+.seqhead .t span { font-family: var(--f-mono); font-weight: 500; font-size: 11.5px; color: var(--muted); }
+.seqhead input { background: transparent; border: 1px solid transparent; border-radius: 6px; padding: 2px 4px; margin-left: -4px; font: inherit; color: var(--muted); font-size: 14.5px; width: 100%; }
+.seqhead input:focus { border-color: var(--line); background: var(--surface); color: var(--fg); outline: none; }
+.dayhead { padding: 16px 0 6px; display: flex; justify-content: space-between; gap: 8px; align-items: baseline; border-bottom: 2px solid var(--fg); }
+.dayhead b { font-family: var(--f-num); font-size: 22px; font-weight: 600; }
+.dayhead span { font-family: var(--f-mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; }
+.prow { display: grid; grid-template-columns: 50px minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; border-bottom: 1px solid var(--line); }
+.pnum { border: 1px solid var(--line); background: var(--surface); border-radius: 8px; font-family: var(--f-num); font-weight: 700; font-size: 20px; padding: 2px 0; text-align: center; white-space: nowrap; }
+.prow.impro .pnum { color: var(--impro); border-color: color-mix(in srgb, var(--impro) 60%, transparent); }
+.prow.cur .pnum { background: var(--fg); color: var(--bg); border-color: var(--fg); }
+.prow.impro.cur .pnum { background: var(--impro); color: #111; }
+.pdesc { min-width: 0; display: grid; gap: 2px; }
+.pdesc textarea, .pdesc .ro { width: 100%; background: transparent; color: var(--fg); border: 1px solid transparent; border-radius: 6px; padding: 3px 5px; margin-left: -5px; font: inherit; font-size: 15px; resize: none; line-height: 1.35; overflow: hidden; }
+.pdesc .ro { cursor: pointer; text-align: left; }
+.pdesc textarea:focus { border-color: var(--line); background: var(--surface); outline: none; }
+.pdesc small { color: var(--muted); font-size: 12.5px; display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.pmeta { display: grid; justify-items: end; gap: 4px; padding-top: 4px; }
+.ptime { width: 64px; background: transparent; border: 1px solid transparent; border-radius: 6px; font: inherit; font-family: var(--f-mono); font-size: 12px; color: var(--muted); text-align: right; padding: 2px 4px; }
+.ptime:focus { border-color: var(--line); background: var(--surface); color: var(--fg); outline: none; }
+.st { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.st.done { color: var(--v-ok); }
+.adds { display: flex; gap: 8px; padding: 10px 0 4px; flex-wrap: wrap; }
+.btn-add { border: 1px dashed var(--muted); background: none; border-radius: 9px; padding: 7px 12px; font-size: 14px; font-weight: 600; }
+.btn-add.impro { border-color: var(--impro); color: var(--impro); }
+.hint { color: var(--muted); font-size: 12.5px; }
+
+/* ---------- 2 · Liste épurée ---------- */
+.c2 { display: grid; }
+.c2 .listcol { padding: 4px 14px 24px; min-width: 0; }
+.c2 .panelcol { display: none; }
+.inline-panel { margin: 4px 0 10px 60px; display: grid; gap: 10px; }
+@container (max-width: 459px) { .inline-panel { margin-left: 0; } }
+@container (min-width: 760px) {
+  .c2 { grid-template-columns: 360px minmax(0, 1fr); flex: 1; min-height: 0; }
+  .c2 .panelcol { display: grid; gap: 12px; align-content: start; padding: 16px; border-right: 1px solid var(--line); overflow-y: auto; }
+  .c2 .listcol { overflow-y: auto; padding: 4px 24px 24px; }
+  .inline-panel { display: none; }
+}
+.mini-slate .sl-nums b { font-size: 46px; }
+.mini-slate .sticks { height: 14px; }
+.row2 { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+.row2 .iconbtn { padding: 0 14px; font-size: 20px; }
+@container (max-width: 459px) { .topbar .sync { display: none; } }
+
+/* ---------- 3 · Ardoise plein écran ---------- */
+.board { flex: 1; min-height: 0; background: var(--slate); color: var(--chalk); display: flex; flex-direction: column; }
+.board .sticks { height: 40px; flex: none; }
+.bd-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 8px 14px; font-family: var(--f-mono); font-size: 12px; color: var(--chalk-dim); border-bottom: 1px solid var(--slate-line); flex: none; }
+.bd-top span { text-align: center; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 1; }
+.bd-top .navs { display: flex; gap: 6px; }
+.bd-top button { white-space: nowrap; background: #161614; color: var(--chalk); border: 1px solid var(--slate-line); border-radius: 8px; padding: 4px 10px; font-family: var(--f-body); font-size: 13px; }
+.bd-nums { flex: 1; min-height: 0; display: grid; grid-template-rows: repeat(3, 1fr); }
+.bd-nums > div { display: grid; grid-template-columns: 84px 1fr; align-items: center; border-bottom: 1px solid var(--slate-line); padding: 0 16px; }
+.bd-nums label { font-family: var(--f-mono); font-size: 13px; letter-spacing: .14em; color: var(--chalk-dim); }
+.bd-nums b { font-family: var(--f-num); font-weight: 700; font-size: 128px; line-height: .9; font-variant-numeric: tabular-nums; }
+.bd-desc { padding: 8px 16px; font-size: 14px; color: var(--chalk-dim); border-bottom: 1px solid var(--slate-line); flex: none; }
+@container (min-width: 760px) {
+  .bd-nums { grid-template-rows: 1fr; grid-template-columns: repeat(3, 1fr); }
+  .bd-nums > div { grid-template-columns: 1fr; align-content: center; border-bottom: 0; border-right: 1px solid var(--slate-line); }
+  .bd-nums > div:last-child { border-right: 0; }
+  .bd-nums b { font-size: 230px; }
+  .board .sticks { height: 64px; }
+}
+.bd-foot { padding: 12px 14px 16px; display: grid; gap: 10px; flex: none; }
+.bd-foot .btn-sound { background: var(--chalk); color: var(--slate); }
+.bd-foot .btn-sound.done { background: #161614; color: var(--chalk-dim); border-color: var(--slate-line); }
+.bd-foot .btn-sound.armed { background: #161614; }
+.bd-foot .verdicts { grid-template-columns: repeat(6, 1fr); gap: 5px; }
+.bd-foot .verdict { background: #161614; border-color: var(--slate-line); color: var(--chalk); padding: 8px 2px; font-size: 11px; }
+.bd-foot .verdict i { font-size: 18px; }
+.bd-foot .verdict[disabled] { opacity: .35; cursor: default; }
+@container (min-width: 760px) { .bd-foot { grid-template-columns: 340px 1fr; align-items: stretch; } .bd-foot .verdict { font-size: 13px; } }
+
+.toast { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); background: var(--fg); color: var(--bg); border-radius: 12px; padding: 8px 8px 8px 14px; display: flex; align-items: center; gap: 12px; font-size: 14px; font-weight: 600; box-shadow: 0 10px 30px rgba(0,0,0,.35); z-index: 5; width: max-content; max-width: calc(100% - 24px); }
+.toast button { background: none; border: 1px solid currentColor; color: inherit; border-radius: 8px; padding: 3px 10px; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="intro">
+    <div class="eyebrow">Cinema Script · maquettes, 2e série</div>
+    <h1>Plus simple, plus proche de l'original</h1>
+    <ul>
+      <li><strong>Plan impro :</strong> toujours numéroté en fin de séquence (5 plans prévus → impro n° 6). Les numéros connus de l'équipe ne bougent jamais.</li>
+      <li><strong>Son du clap :</strong> un bouton à part, qui se verrouille une fois joué, pour ne jamais l'entendre deux fois sur une prise.</li>
+      <li><strong>Une seule personne</strong> pour le script et le clap : l'ardoise plein écran et la saisie de la prise sont sur le même appareil.</li>
+      <li>Chaque maquette s'adapte à la largeur : passez de <strong>Téléphone</strong> à <strong>PC</strong> pour voir les deux mises en page.</li>
+    </ul>
+  </header>
+
+  <div class="pickers">
+    <div class="seg" role="group" aria-label="Maquette" id="pickConcept"></div>
+    <div class="seg small" role="group" aria-label="Taille d'écran" id="pickSize"></div>
+  </div>
+  <div class="frame-zone"><div id="frame" class="frame"></div></div>
+  <section class="notes" id="notes"></section>
+</div>
+
+<script>
+// --- CLAP AUDIO (copie exacte de l'original) ---
+class DigitalClapper {
+  constructor() {
+    this.audioCtx = null;
+    this.dtmfFreqs = {
+      '1': [10697, 12209], '2': [10697, 12336], '3': [10697, 12477],
+      '4': [10770, 12209], '5': [10770, 12336], '6': [10770, 12477],
+      '7': [10852, 12209], '8': [10852, 12336], '9': [10852, 12477],
+      '*': [10941, 12209], '0': [10941, 12336], '#': [10941, 12477]
+    };
+  }
+  play(scene, shot, take) {
+    if (!this.audioCtx) this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (this.audioCtx.state === 'suspended') this.audioCtx.resume();
+    const payload = `*${scene}*${shot}*${take}#*`;
+    let timeCursor = this.audioCtx.currentTime + 0.065;
+    const toneDuration = 0.080, pauseDuration = 0.120;
+    for (let i = 0; i < payload.length; i++) {
+      const f = this.dtmfFreqs[payload[i]];
+      if (f) { this._playDTMF(f[0], f[1], timeCursor, toneDuration); timeCursor += toneDuration + pauseDuration; }
+    }
+  }
+  _playDTMF(f1, f2, startTime, duration) {
+    const osc1 = this.audioCtx.createOscillator(), osc2 = this.audioCtx.createOscillator(), g = this.audioCtx.createGain();
+    osc1.frequency.value = f1; osc2.frequency.value = f2; osc1.type = 'sine'; osc2.type = 'sine';
+    g.gain.setValueAtTime(0, startTime);
+    g.gain.linearRampToValueAtTime(0.75, startTime + 0.005);
+    g.gain.setValueAtTime(0.75, startTime + duration - 0.005);
+    g.gain.linearRampToValueAtTime(0, startTime + duration);
+    osc1.connect(g); osc2.connect(g); g.connect(this.audioCtx.destination);
+    osc1.start(startTime); osc2.start(startTime); osc1.stop(startTime + duration); osc2.stop(startTime + duration);
+  }
+}
+const clapper = new DigitalClapper();
+
+// --- AVIS (libellés exacts du contrat avec l'extension) ---
+const AVIS = [
+  { label: "⭐ MASTER (Parfaite)", short: "Master", icon: "⭐", cls: "master" },
+  { label: "✅ OK (Bonne)", short: "OK", icon: "✅", cls: "ok" },
+  { label: "😐 Moyen", short: "Moyen", icon: "😐", cls: "moyen" },
+  { label: "😕 Bof", short: "Bof", icon: "😕", cls: "bof" },
+  { label: "❌ KO (Ratée)", short: "KO", icon: "❌", cls: "ko" },
+  { label: "❓ À vérifier", short: "À vérifier", icon: "❓", cls: "check" }
+];
+const avisOf = (label) => AVIS.find((a) => a.label === label) || AVIS[5];
+
+// --- DONNÉES D'EXEMPLE ---
+const iso = (h, m) => new Date(2026, 9, 14, h, m).toISOString();
+const S = {
+  sequences: [
+    { id: 1, info: "INT. CUISINE — JOUR · Léa, Marc" },
+    { id: 2, info: "EXT. RUE DES ACACIAS — NUIT · Léa" },
+    { id: 3, info: "INT. VOITURE — NUIT · Léa, Marc" }
+  ],
+  plans: [
+    { seqId: 1, id: 1, impro: 0, info: "Plan large cuisine, Léa entre et pose son sac", temps: "20 min" },
+    { seqId: 1, id: 2, impro: 0, info: "Plan moyen Marc à table, lit le journal", temps: "15 min" },
+    { seqId: 1, id: 3, impro: 0, info: "Gros plan Léa ouvre le frigo, hésite", temps: "10 min" },
+    { seqId: 1, id: 4, impro: 0, info: "Insert main sur la tasse (raccord café)", temps: "5 min" },
+    { seqId: 1, id: 5, impro: 0, info: "Contrechamp Marc, il lève les yeux", temps: "10 min" },
+    { seqId: 2, id: 1, impro: 0, info: "Plan d'ensemble rue, Léa marche vers la caméra", temps: "25 min" },
+    { seqId: 2, id: 2, impro: 0, info: "Travelling latéral, Léa au téléphone", temps: "30 min" },
+    { seqId: 3, id: 1, impro: 0, info: "Champ Léa conductrice, pluie sur le pare-brise", temps: "20 min" },
+    { seqId: 3, id: 2, impro: 0, info: "Contrechamp Marc passager", temps: "20 min" }
+  ],
+  takes: [
+    { uid: "a1", seqId: 1, planId: 1, prise: 1, avis: "❌ KO (Ratée)", com: "Perche dans le champ", timestamp: iso(9, 12) },
+    { uid: "a2", seqId: 1, planId: 1, prise: 2, avis: "✅ OK (Bonne)", com: "", timestamp: iso(9, 16) },
+    { uid: "a3", seqId: 1, planId: 1, prise: 3, avis: "⭐ MASTER (Parfaite)", com: "Sac main gauche", timestamp: iso(9, 21) },
+    { uid: "a4", seqId: 1, planId: 2, prise: 1, avis: "😐 Moyen", com: "Jeu trop rapide", timestamp: iso(9, 48) },
+    { uid: "a5", seqId: 1, planId: 2, prise: 2, avis: "✅ OK (Bonne)", com: "Journal ouvert page 3", timestamp: iso(9, 53) },
+    { uid: "a6", seqId: 1, planId: 3, prise: 1, avis: "😕 Bof", com: "Point flou en fin de plan", timestamp: iso(10, 21) },
+    { uid: "a7", seqId: 1, planId: 3, prise: 2, avis: "❌ KO (Ratée)", com: "", timestamp: iso(10, 25) },
+    { uid: "a8", seqId: 1, planId: 3, prise: 3, avis: "❓ À vérifier", com: "Avion pendant la réplique", timestamp: iso(10, 30) }
+  ],
+  tournageList: [
+    { type: "sep", text: "Mardi matin" },
+    { type: "plan", seqId: 1, planId: 1 }, { type: "plan", seqId: 1, planId: 2 }, { type: "plan", seqId: 1, planId: 3 },
+    { type: "plan", seqId: 1, planId: 4 }, { type: "plan", seqId: 1, planId: 5 },
+    { type: "sep", text: "Mardi après-midi" },
+    { type: "plan", seqId: 3, planId: 1 }, { type: "plan", seqId: 3, planId: 2 },
+    { type: "sep", text: "Mardi nuit" },
+    { type: "plan", seqId: 2, planId: 1 }, { type: "plan", seqId: 2, planId: 2 }
+  ]
+};
+
+// --- ÉTAT DE L'ÉCRAN ---
+const V = { concept: "1", size: window.innerWidth < 700 ? "phone" : "pc", back: "1",
+  cur: { seqId: 1, planId: 3 }, sound: null, armed: false, note: "", saved: null, toast: null,
+  drawer: false, list1: "planning", list2: "decoupage", focus: null };
+
+// --- OUTILS ---
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const findPlan = (s, p) => S.plans.find((x) => x.seqId === s && x.id === p);
+const takesOf = (s, p) => S.takes.filter((t) => t.seqId === s && t.planId === p).sort((a, b) => a.prise - b.prise);
+const nextTake = (s, p) => takesOf(s, p).reduce((m, t) => Math.max(m, t.prise), 0) + 1;
+const hhmm = (d) => new Date(d).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+const isCur = (s, p) => V.cur.seqId === s && V.cur.planId === p;
+const order = () => S.tournageList.filter((i) => i.type === "plan" && findPlan(i.seqId, i.planId));
+const hasGood = (p) => takesOf(p.seqId, p.id).some((t) => /MASTER|OK/.test(t.avis));
+const dots = (p) => `<span class="dots">${takesOf(p.seqId, p.id).map((t) => `<span class="dot c-${avisOf(t.avis).cls}" title="Prise ${t.prise} · ${esc(avisOf(t.avis).short)}"></span>`).join("")}</span>`;
+function minutes(str) {
+  const s = String(str || "").toLowerCase(), h = s.match(/(\d+)\s*h\s*(\d+)?/);
+  if (h) return +h[1] * 60 + (+h[2] || 0);
+  const m = s.match(/\d+/);
+  return m ? +m[0] : 0;
+}
+const fmtDur = (min) => min >= 60 ? Math.floor(min / 60) + " h " + String(min % 60).padStart(2, "0") : min + " min";
+function nextPlanAfterCur() {
+  const list = order(), i = list.findIndex((x) => isCur(x.seqId, x.planId));
+  const n = list[i + 1];
+  return n ? findPlan(n.seqId, n.planId) : null;
+}
+const soundPlayed = () => V.sound && isCur(V.sound.seqId, V.sound.planId) && V.sound.prise === nextTake(V.cur.seqId, V.cur.planId);
+
+// --- ACTIONS ---
+let armTimer;
+function sound() {
+  const { seqId, planId } = V.cur, prise = nextTake(seqId, planId);
+  if (soundPlayed() && !V.armed) {
+    // Déjà joué pour cette prise : un second appui arme, un troisième rejoue
+    V.armed = true; clearTimeout(armTimer);
+    armTimer = setTimeout(() => { V.armed = false; render(); }, 3000);
+    return render();
+  }
+  V.armed = false;
+  clapper.play(seqId, planId, prise);
+  V.sound = { seqId, planId, prise, at: new Date() };
+  render();
+}
+function saveTake(i) {
+  const { seqId, planId } = V.cur, a = AVIS[i];
+  const t = { uid: Date.now().toString(36), seqId, planId, prise: nextTake(seqId, planId), avis: a.label, com: V.note.trim(), timestamp: new Date().toISOString() };
+  S.takes.push(t);
+  V.note = ""; V.sound = null; V.armed = false; V.saved = t.uid;
+  V.toast = { text: `Prise ${t.prise} enregistrée · ${a.short}`, uid: t.uid };
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { V.toast = null; render(); }, 5000);
+  render();
+}
+let toastTimer;
+function undo() {
+  S.takes = S.takes.filter((t) => t.uid !== V.toast.uid);
+  V.toast = null; V.saved = null; render();
+}
+function goto(seqId, planId) {
+  V.cur = { seqId, planId }; V.sound = null; V.armed = false; V.saved = null; V.note = ""; V.drawer = false;
+  render();
+}
+function step(d) {
+  const list = order(), i = list.findIndex((x) => isCur(x.seqId, x.planId));
+  const n = list[Math.max(0, Math.min(list.length - 1, i + d))];
+  if (n) goto(n.seqId, n.planId);
+}
+function addPlan(seqId, impro, focus) {
+  const own = S.plans.filter((p) => p.seqId === seqId);
+  const id = own.length ? Math.max(...own.map((p) => p.id)) + 1 : 1;   // toujours en fin de séquence
+  S.plans.push({ seqId, id, impro, info: "", temps: "" });
+  S.tournageList.push({ type: "plan", seqId, planId: id });
+  if (impro) { V.cur = { seqId, planId: id }; V.sound = null; V.saved = null; }
+  V.focus = "d-" + seqId + "-" + id;
+  render();
+}
+
+// --- MORCEAUX COMMUNS ---
+function slate(variant) {
+  const { seqId, planId } = V.cur, p = findPlan(seqId, planId), seq = S.sequences.find((s) => s.id === seqId);
+  return `<div class="slate ${variant || ""}">
+    <div class="sticks"></div>
+    <div class="sl-top"><span>LES HEURES CREUSES</span><span>14.10.26</span></div>
+    <div class="sl-nums"><div><label>SÉQ</label><b>${seqId}</b></div><div><label>PLAN</label><b>${planId}</b></div><div><label>PRISE</label><b>${nextTake(seqId, planId)}</b></div></div>
+    ${variant === "mini-slate" ? "" : `<div class="sl-desc"><small>${esc(seq.info)}${p.impro ? ' · <span class="tag-impro">IMPRO</span>' : ""}</small>
+      <textarea rows="2" data-edit="plan" data-seq="${seqId}" data-plan="${planId}" aria-label="Découpage du plan" placeholder="Décrire le plan…">${esc(p.info)}</textarea></div>`}
+  </div>`;
+}
+function soundBtn() {
+  const n = nextTake(V.cur.seqId, V.cur.planId), { seqId, planId } = V.cur;
+  if (V.armed) return `<button type="button" class="btn-sound armed" data-act="sound"><b>Rejouer le son ?</b><span>Touchez encore : la synchro prendra le 1er son entendu</span></button>`;
+  if (soundPlayed()) return `<button type="button" class="btn-sound done" data-act="sound"><b>✓ Son joué · prise ${n}</b><span>${V.sound.at.toLocaleTimeString("fr-FR")} · donnez l'avis après « coupez »</span></button>`;
+  return `<button type="button" class="btn-sound" data-act="sound"><b>🔊 Son du clap · prise ${n}</b><span>*${seqId}*${planId}*${n}#*</span></button>`;
+}
+const verdicts = (attrs) => `<div class="verdicts">${AVIS.map((a, i) => `<button type="button" class="verdict c-${a.cls}" data-act="avis" data-i="${i}" ${attrs || ""}><i aria-hidden="true">${a.icon}</i>${esc(a.short)}</button>`).join("")}</div>`;
+const noteField = () => `<input class="note" id="note" type="text" placeholder="Note prise ${nextTake(V.cur.seqId, V.cur.planId)} (raccord, son…) facultatif" value="${esc(V.note)}" data-edit="note" autocomplete="off">`;
+function takeList(limit) {
+  const t = takesOf(V.cur.seqId, V.cur.planId).reverse().slice(0, limit || 99);
+  if (!t.length) return `<div class="empty">Aucune prise sur ce plan.</div>`;
+  return `<ol class="takes">${t.map((x) => { const a = avisOf(x.avis);
+    return `<li class="take${x.uid === V.saved ? " fresh" : ""}"><span class="n">${x.prise}</span><span class="pill c-${a.cls}">${esc(a.short)}</span><span class="com">${esc(x.com) || "—"}</span><time>${hhmm(x.timestamp)}</time></li>`; }).join("")}</ol>`;
+}
+function afterSave() {
+  if (!V.saved) return "";
+  const p = findPlan(V.cur.seqId, V.cur.planId), n = nextPlanAfterCur();
+  return `<div class="saved">
+    <p>Prochaine étape : <strong>prise ${nextTake(p.seqId, p.id)}</strong> sur ce plan, ou plan suivant.</p>
+    ${n ? `<button type="button" class="btn-next" data-act="goto" data-seq="${n.seqId}" data-plan="${n.id}"><span class="code">${n.seqId}·${n.id}</span><span class="txt">${esc(n.info || "Plan sans description")}</span><span aria-hidden="true">→</span></button>` : ""}
+    ${hasGood(p) ? "" : `<span class="warn">Aucune prise OK ni Master sur ${p.seqId}·${p.id} pour l'instant.</span>`}
+  </div>`;
+}
+function shootBlock() {
+  return `${soundBtn()}
+    <div class="lbl"><span>Avis = enregistre la prise ${nextTake(V.cur.seqId, V.cur.planId)}</span></div>
+    ${verdicts()}
+    ${noteField()}
+    ${afterSave()}`;
+}
+const toast = () => V.toast ? `<div class="toast"><span>${esc(V.toast.text)}</span><button type="button" data-act="undo">Annuler</button></div>` : "";
+
+function planRow(p, opts) {
+  const code = opts.withSeq ? p.seqId + "·" + p.id : p.id;
+  const t = takesOf(p.seqId, p.id);
+  const id = "d-" + p.seqId + "-" + p.id;
+  return `<div class="prow${isCur(p.seqId, p.id) ? " cur" : ""}${p.impro ? " impro" : ""}">
+    <button type="button" class="pnum" data-act="goto" data-seq="${p.seqId}" data-plan="${p.id}" title="Sélectionner pour tourner">${code}</button>
+    <div class="pdesc">
+      ${opts.readonly ? `<button type="button" class="ro" data-act="goto" data-seq="${p.seqId}" data-plan="${p.id}">${esc(p.info) || "<em>Sans description</em>"}</button>`
+        : `<textarea id="${id}" rows="1" data-edit="plan" data-seq="${p.seqId}" data-plan="${p.id}" placeholder="${p.impro ? "Plan impro : décrire…" : "Décrire le plan…"}">${esc(p.info)}</textarea>`}
+      <small>${p.impro ? '<span class="tag-impro">IMPRO</span>' : ""}${t.length ? dots(p) + " " + t.length + " prise" + (t.length > 1 ? "s" : "") : ""}</small>
+    </div>
+    <div class="pmeta">
+      <input class="ptime" type="text" value="${esc(p.temps)}" placeholder="temps" data-edit="temps" data-seq="${p.seqId}" data-plan="${p.id}" aria-label="Temps prévu">
+      <span class="st${hasGood(p) ? " done" : ""}">${hasGood(p) ? "✓ tourné" : t.length ? "en cours" : ""}</span>
+    </div>
+  </div>${opts.inline && isCur(p.seqId, p.id) ? `<div class="inline-panel">${slate("mini-slate")}${shootBlock()}${takeList(3)}</div>` : ""}`;
+}
+function decoupageList(opts) {
+  return S.sequences.map((s) => {
+    const plans = S.plans.filter((p) => p.seqId === s.id).sort((a, b) => a.id - b.id);
+    const done = plans.filter(hasGood).length;
+    return `<div class="seqhead"><div class="t">Séquence ${s.id}<span>${done}/${plans.length} tournés</span></div>
+      <input type="text" value="${esc(s.info)}" data-edit="seq" data-seq="${s.id}" placeholder="Lieu, moment, personnages…" aria-label="Infos séquence ${s.id}"></div>
+      ${plans.map((p) => planRow(p, opts)).join("")}
+      <div class="adds"><button type="button" class="btn-add" data-act="addplan" data-seq="${s.id}" data-impro="0">+ Plan</button>
+      <button type="button" class="btn-add impro" data-act="addplan" data-seq="${s.id}" data-impro="1">+ Impro (n° ${Math.max(0, ...plans.map((p) => p.id)) + 1})</button></div>`;
+  }).join("") + `<div class="adds"><button type="button" class="btn-add">+ Séquence</button><span class="hint">Sur PC : <kbd>Entrée</kbd> dans un plan ajoute un plan en fin de séquence.</span></div>`;
+}
+function planningList(opts) {
+  let out = "";
+  const groups = []; let g = null;
+  S.tournageList.forEach((i) => {
+    if (i.type === "sep") { g = { text: i.text, items: [] }; groups.push(g); return; }
+    const p = findPlan(i.seqId, i.planId); if (!p) return;
+    if (!g) { g = { text: "", items: [] }; groups.push(g); }
+    g.items.push(p);
+  });
+  groups.forEach((gr) => {
+    const done = gr.items.filter(hasGood).length;
+    if (gr.text) out += `<div class="dayhead"><b>${esc(gr.text)}</b><span>${done}/${gr.items.length} · ${fmtDur(gr.items.reduce((m, p) => m + minutes(p.temps), 0))}</span></div>`;
+    gr.items.forEach((p) => { out += planRow(p, { ...opts, withSeq: true }); });
+  });
+  return out + `<div class="adds"><button type="button" class="btn-add">+ Séparateur</button><span class="hint">Glisser un numéro pour changer l'ordre.</span></div>`;
+}
+
+// --- 1 · FICHE CLAP ---
+function render1() {
+  const list = [];
+  S.tournageList.forEach((i) => {
+    if (i.type === "sep") list.push(`<span class="daylbl">${esc(i.text)}</span>`);
+    else { const p = findPlan(i.seqId, i.planId); if (p) list.push(`<button type="button" class="chip${p.impro ? " impro" : ""}${hasGood(p) ? " done" : ""}" aria-current="${isCur(p.seqId, p.id)}" data-act="goto" data-seq="${p.seqId}" data-plan="${p.id}">${p.seqId}·${p.id}</button>`); }
+  });
+  return `<div class="app">
+    <div class="topbar"><button type="button" class="iconbtn" data-act="drawer">☰ Liste</button><span class="proj">Les Heures Creuses</span><span class="sync">Drive</span>
+      <button type="button" class="iconbtn" data-act="full">⛶ Ardoise</button></div>
+    <nav class="strip" aria-label="Ordre de tournage">${list.join("")}</nav>
+    <div class="scroll"><div class="c1">
+      <div class="col a-slate">${slate()}</div>
+      <div class="col a-shoot">${shootBlock()}</div>
+      <div class="col a-takes"><div class="lbl"><span>Prises de ce plan</span><span>${takesOf(V.cur.seqId, V.cur.planId).length}</span></div>${takeList()}</div>
+    </div></div>
+    ${V.drawer ? `<div class="drawer">
+      <div class="topbar"><div class="seg small" role="group">
+        <button type="button" aria-pressed="${V.list1 === "planning"}" data-act="list1" data-v="planning">Planning</button>
+        <button type="button" aria-pressed="${V.list1 === "decoupage"}" data-act="list1" data-v="decoupage">Découpage</button></div>
+        <span class="proj"></span><button type="button" class="iconbtn" data-act="drawer">Fermer</button></div>
+      <div class="scroll">${V.list1 === "planning" ? planningList({ readonly: true }) : decoupageList({})}</div></div>` : ""}
+    ${toast()}
+  </div>`;
+}
+
+// --- 2 · LISTE ÉPURÉE ---
+function render2() {
+  return `<div class="app">
+    <div class="topbar"><span class="proj">Les Heures Creuses</span><span class="sync">Drive</span>
+      <div class="seg small" role="group">
+        <button type="button" aria-pressed="${V.list2 === "decoupage"}" data-act="list2" data-v="decoupage">Découpage</button>
+        <button type="button" aria-pressed="${V.list2 === "planning"}" data-act="list2" data-v="planning">Planning</button></div>
+      <button type="button" class="iconbtn">PDF</button></div>
+    <div class="c2 scroll">
+      <aside class="panelcol">${slate()}<div class="row2">${soundBtn()}<button type="button" class="iconbtn" data-act="full" title="Ardoise plein écran">⛶</button></div>
+        <div class="lbl"><span>Avis = enregistre la prise ${nextTake(V.cur.seqId, V.cur.planId)}</span></div>${verdicts()}${noteField()}${afterSave()}
+        <div class="lbl"><span>Prises ${V.cur.seqId}·${V.cur.planId}</span></div>${takeList()}</aside>
+      <div class="listcol">${V.list2 === "planning" ? planningList({ inline: true }) : decoupageList({ inline: true })}</div>
+    </div>
+    ${toast()}
+  </div>`;
+}
+
+// --- 3 · ARDOISE PLEIN ÉCRAN ---
+function render3() {
+  const { seqId, planId } = V.cur, p = findPlan(seqId, planId);
+  return `<div class="app"><div class="board">
+    <div class="sticks"></div>
+    <div class="bd-top"><div class="navs"><button type="button" data-act="step" data-d="-1" aria-label="Plan précédent">‹</button><button type="button" data-act="step" data-d="1" aria-label="Plan suivant">›</button></div>
+      <span>LES HEURES CREUSES · 14.10.26</span><button type="button" data-act="exitfull">✕ Fermer</button></div>
+    <div class="bd-nums"><div><label>SÉQ</label><b>${seqId}</b></div><div><label>PLAN</label><b>${planId}</b></div><div><label>PRISE</label><b>${nextTake(seqId, planId)}</b></div></div>
+    <div class="bd-desc">${p.impro ? '<span class="tag-impro">IMPRO</span> ' : ""}${esc(p.info)}</div>
+    <div class="bd-foot">${soundBtn()}${verdicts()}</div>
+  </div>${toast()}</div>`;
+}
+
+// --- NOTES PAR MAQUETTE ---
+const NOTES = {
+  "1": `<div><h2>1 · Fiche clap (pour le tournage)</h2><ul>
+      <li><strong>Un plan à la fois</strong>, présenté comme un clap : SÉQ / PLAN / PRISE en grand, la description juste en dessous et modifiable sur place.</li>
+      <li><strong>Bande de numéros en haut</strong> dans l'ordre du planning : on voit où on en est (✓ = une prise OK), un appui change de plan.</li>
+      <li><strong>Liste</strong> (planning ou découpage) dans un tiroir, pour éditer ou sauter à un plan.</li></ul></div>
+    <div><h2>Le geste sur le plateau</h2><ul>
+      <li>Son du clap → action → « coupez » → <strong>un appui sur l'avis</strong>. La note se tape pendant la prise et part avec l'avis.</li>
+      <li>Après l'avis, l'app propose la suite : <strong>prise suivante</strong> (par défaut) ou <strong>plan suivant</strong>, avec une alerte s'il n'y a encore aucune prise OK.</li></ul></div>
+    <div><h2>À essayer</h2><ul>
+      <li>Son du clap, puis appuyez de nouveau : le bouton demande confirmation avant de rejouer.</li>
+      <li>Passez en « PC » : fiche à gauche, actions à droite.</li></ul></div>`,
+  "2": `<div><h2>2 · Liste épurée (votre version, nettoyée)</h2><ul>
+      <li><strong>Même organisation</strong> que l'app actuelle : panneau de prise à gauche sur PC, liste à droite ; sur téléphone, le panneau s'ouvre sous le plan sélectionné.</li>
+      <li><strong>Moins de couleurs</strong> : les séquences sont des titres, plus des blocs colorés. La couleur est réservée aux avis et à l'impro.</li>
+      <li>Le numéro du plan est le bouton « tourner » ; le texte se modifie directement.</li></ul></div>
+    <div><h2>Édition rapide</h2><ul>
+      <li><strong>Tout est éditable en place</strong> (séquence, plan, temps), sans crayon ni fenêtre.</li>
+      <li>Sur PC, <kbd>Entrée</kbd> dans un plan ajoute un plan en fin de séquence : on tape le découpage comme une liste.</li>
+      <li>« + Impro » affiche le numéro qu'il prendra (fin de séquence).</li></ul></div>
+    <div><h2>À essayer</h2><ul>
+      <li>Touchez un numéro de plan, puis un avis.</li>
+      <li>En PC, cliquez dans un plan puis <kbd>Entrée</kbd>.</li></ul></div>`,
+  "3": `<div><h2>3 · Ardoise plein écran</h2><ul>
+      <li><strong>Ouverte depuis les maquettes 1 et 2</strong> (bouton ⛶) : on la montre à la caméra.</li>
+      <li><strong>Toucher les chiffres ne fait rien</strong> : le son part uniquement du bouton dédié, pour ne jamais l'entendre deux fois.</li>
+      <li>Une fois joué, le bouton passe à « ✓ Son joué ». Pour rejouer, il faut deux appuis en moins de 3 s.</li></ul></div>
+    <div><h2>Puis l'avis, sans quitter l'écran</h2><ul>
+      <li>Les avis restent en bas ; après l'appui, la prise suivante s'affiche.</li>
+      <li>En PC (ou téléphone tourné), les trois numéros passent côte à côte, encore plus grands.</li>
+      <li>Idée : garder l'écran allumé tant que l'ardoise est ouverte.</li></ul></div>`
+};
+
+// --- RENDU ---
+function render() {
+  document.getElementById("pickConcept").innerHTML = [["1", "1 · Fiche clap"], ["2", "2 · Liste épurée"], ["3", "3 · Ardoise plein écran"]]
+    .map(([k, l]) => `<button type="button" aria-pressed="${V.concept === k}" data-act="concept" data-c="${k}">${l}</button>`).join("");
+  document.getElementById("pickSize").innerHTML = [["phone", "Téléphone"], ["pc", "PC"]]
+    .map(([k, l]) => `<button type="button" aria-pressed="${V.size === k}" data-act="size" data-s="${k}">${l}</button>`).join("");
+  const frame = document.getElementById("frame");
+  frame.className = "frame " + V.size;
+  const keep = document.activeElement && document.activeElement.id === "note";
+  const scrollers = [...frame.querySelectorAll(".scroll")].map((s) => s.scrollTop);
+  frame.innerHTML = V.concept === "1" ? render1() : V.concept === "2" ? render2() : render3();
+  [...frame.querySelectorAll(".scroll")].forEach((s, i) => { if (scrollers[i]) s.scrollTop = scrollers[i]; });
+  frame.querySelectorAll(".pdesc textarea, .sl-desc textarea").forEach(autosize);
+  document.getElementById("notes").innerHTML = NOTES[V.concept];
+  if (keep) document.getElementById("note")?.focus();
+  if (V.focus) { const f = document.getElementById(V.focus); if (f) { f.focus(); f.scrollIntoView({ block: "nearest" }); } V.focus = null; }
+}
+function autosize(t) { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; }
+
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-act]");
+  if (!b) return;
+  const d = b.dataset;
+  switch (d.act) {
+    case "concept": V.concept = d.c; if (d.c !== "3") V.back = d.c; V.drawer = false; render(); break;
+    case "size": V.size = d.s; render(); break;
+    case "sound": sound(); break;
+    case "avis": saveTake(+d.i); break;
+    case "undo": undo(); break;
+    case "goto": goto(+d.seq, +d.plan); break;
+    case "step": step(+d.d); break;
+    case "drawer": V.drawer = !V.drawer; render(); break;
+    case "list1": V.list1 = d.v; render(); break;
+    case "list2": V.list2 = d.v; render(); break;
+    case "addplan": addPlan(+d.seq, +d.impro); break;
+    case "full": V.back = V.concept; V.concept = "3"; render(); break;
+    case "exitfull": V.concept = V.back === "3" ? "1" : V.back; render(); break;
+  }
+});
+document.addEventListener("input", (e) => {
+  const t = e.target, d = t.dataset;
+  if (d.edit === "note") V.note = t.value;
+  else if (d.edit === "plan") { findPlan(+d.seq, +d.plan).info = t.value; autosize(t); }
+  else if (d.edit === "temps") findPlan(+d.seq, +d.plan).temps = t.value;
+  else if (d.edit === "seq") S.sequences.find((s) => s.id === +d.seq).info = t.value;
+});
+// Les modifications de texte redessinent à la sortie du champ (comme l'app actuelle)
+document.addEventListener("change", (e) => { if (["plan", "temps", "seq"].includes(e.target.dataset.edit)) render(); });
+document.addEventListener("keydown", (e) => {
+  const d = e.target.dataset || {};
+  if (d.edit === "plan" && e.key === "Enter" && !e.shiftKey && e.target.closest(".pdesc")) {
+    e.preventDefault();
+    const p = findPlan(+d.seq, +d.plan);
+    addPlan(p.seqId, 0);
+  }
+});
+
+render();
+</script>
+</body>
+</html>
