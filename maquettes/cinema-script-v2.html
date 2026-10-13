@@ -123,6 +123,8 @@
     .seq-num:hover { background: rgba(255,255,255,.1); }
     .seq-num-edit { display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 1.2rem; }
     .seq-num-edit input { width: 5.5rem; padding: 6px 8px; font-size: 1.1rem; font-weight: bold; background: rgba(0,0,0,.35); color: white; border-color: var(--accent); }
+    .acc-plan .seq-num, .acc-plan .seq-num-edit { font-size: 1.1rem; }
+    .plan-impro-tag { font-size: .8rem; color: var(--orange); font-weight: bold; }
     .seq-error { background: rgba(208,2,27,.25); border: 1px solid var(--red); color: white; border-radius: 6px; padding: 6px 10px; font-size: .9rem; }
     .seq-meta { font-size: .85rem; opacity: .7; white-space: nowrap; }
     .chevron { font-size: 0.9rem; opacity: 0.7; }
@@ -172,7 +174,9 @@
     .take-dots { display: inline-flex; gap: 3px; flex: none; }
     .take-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--av, var(--text-muted)); display: block; }
     .last-marker { font-size: .78rem; font-weight: bold; color: var(--accent); padding: 8px 15px 0; }
-    .shoot-takes { padding: 0 15px 12px; }
+    .shoot-takes { padding: 0 15px 12px; display: grid; gap: 8px; }
+    .tournage-item.active .t-info { white-space: normal; overflow: visible; opacity: 1; font-size: 1rem; line-height: 1.4; }
+    .shoot-seq { font-size: .85rem; opacity: .7; white-space: pre-wrap; border-left: 2px solid var(--blue); padding-left: 8px; }
     .shoot-takes .take-list { margin-left: 0; }
     @media (max-width: 560px) { .t-temps { width: 70px; } .tournage-row { padding: 8px 10px; gap: 8px; } }
 
@@ -282,8 +286,8 @@ Structure de state (CONTRAT avec l'extension Premiere : ne pas renommer ces cham
         </div>
 
         <div class="action-row" id="pdfRow">
-            <button class="btn-action btn-pdf" type="button" id="btnPdfTournage">📄 PDF (Tournage)</button>
             <button class="btn-action btn-pdf-decoupage" type="button" id="btnPdfDecoupage">📄 PDF (Découpage)</button>
+            <button class="btn-action btn-pdf" type="button" id="btnPdfTournage">📄 PDF (Plan de travail)</button>
         </div>
     </div>
 
@@ -494,6 +498,7 @@ let shootView = "tournage";     // 'tournage' ou 'scenario'
 const openSeqs = new Set();
 let activeSeq = null, activePlan = null;
 let editingSeq = null, seqError = "";
+let editingPlan = null, planError = "";    // "seqId.planId" du plan dont on change le numéro
 let searchOpen = false, search = "";
 let flashSel = null, focusSel = null, scrollSel = null;
 let pendingRemote = null;
@@ -697,16 +702,37 @@ function renderDecoupage() {
   return wrap;
 }
 
-function seqNumEditor(seq) {
+function numEditor(prefix, value, label, onApply, onCancel) {
   let done = false;
-  const apply = (value) => { if (done) return; done = true; applySeqNum(seq.id, value); };
-  return el("label", { class: "seq-num-edit" }, "SÉQ ",
-    el("input", { id: "seqNumInput", type: "number", inputmode: "numeric", min: "1", value: String(seq.id), "aria-label": "Nouveau numéro de la séquence " + seq.id,
+  const apply = (v) => { if (done) return; done = true; onApply(v); };
+  return el("label", { class: "seq-num-edit" }, prefix,
+    el("input", { id: "seqNumInput", type: "number", inputmode: "numeric", min: "1", value: String(value), "aria-label": label,
       onkeydown: (e) => {
         if (e.key === "Enter") { e.preventDefault(); apply(e.target.value); }
-        if (e.key === "Escape") { done = true; editingSeq = null; seqError = ""; render(); }
+        if (e.key === "Escape") { done = true; onCancel(); }
       },
       onblur: (e) => apply(e.target.value) }));
+}
+function seqNumEditor(seq) {
+  return numEditor("SÉQ ", seq.id, "Nouveau numéro de la séquence " + seq.id, (v) => applySeqNum(seq.id, v),
+    () => { editingSeq = null; seqError = ""; render(); });
+}
+
+async function applyPlanNum(seqId, oldId, str) {
+  const newId = parseInt(str, 10);
+  if (newId === oldId) { editingPlan = null; planError = ""; return render(); }
+  if (isNaN(newId) || newId <= 0) { planError = "Numéro invalide."; focusSel = "#seqNumInput"; return render(); }
+  if (findPlan(seqId, newId)) { planError = "Le plan " + seqId + "." + newId + " existe déjà."; focusSel = "#seqNumInput"; return render(); }
+  editingPlan = null; planError = "";
+  if (!(await confirmRenumber(hasTakes((t) => t.seqId === seqId && t.planId === oldId)))) return render();
+  findPlan(seqId, oldId).id = newId;
+  state.takes.filter((t) => t.seqId === seqId && t.planId === oldId).forEach((t) => { t.planId = newId; });
+  state.tournageList.filter((i) => i.type === "plan" && i.seqId === seqId && i.planId === oldId).forEach((i) => { i.planId = newId; });
+  if (activeSeq === seqId && activePlan === oldId) activePlan = newId;
+  flashSel = `.plan-block[data-seq="${seqId}"][data-plan="${newId}"] .acc-plan`;
+  scrollSel = `.plan-block[data-seq="${seqId}"][data-plan="${newId}"]`;
+  toast("Plan " + seqId + "." + oldId + " → " + seqId + "." + newId + " (rangé à sa place)");
+  commit();
 }
 
 async function applySeqNum(oldId, str) {
@@ -732,15 +758,23 @@ function renderPlanBlock(p) {
   const prep = mode === "prep";
   const takes = takesOf(p.seqId, p.id);
   const isActive = !prep && activeSeq === p.seqId && activePlan === p.id;
+  const key = p.seqId + "." + p.id;
+  let numNode;
+  if (!prep || readOnly) numNode = el("span", { class: "header-label", text: "PLAN " + p.id + (p.impro ? " (IMPRO)" : "") });
+  else if (editingPlan === key) numNode = numEditor("PLAN ", p.id, "Nouveau numéro du plan " + key, (v) => applyPlanNum(p.seqId, p.id, v),
+    () => { editingPlan = null; planError = ""; render(); });
+  else numNode = el("button", { class: "seq-num", type: "button", title: "Changer le numéro du plan", onclick: () => { saveNow(); editingPlan = key; planError = ""; focusSel = "#seqNumInput"; render(); } },
+    "PLAN ", el("b", { text: String(p.id) }), el("span", { class: "pen", text: "✎" }), p.impro ? el("span", { class: "plan-impro-tag", text: "IMPRO" }) : null);
   return el("div", { class: "plan-block", "data-seq": p.seqId, "data-plan": p.id },
     el("div", { class: "acc-header acc-plan" + (p.impro ? " impro" : "") + (isActive ? " active" : "") },
       el("div", { class: "acc-top" },
         el(prep ? "div" : "button", { class: "acc-title", type: prep ? null : "button", onclick: prep ? null : () => activatePlan(p.seqId, p.id) },
-          el("span", { class: "header-label", text: "PLAN " + p.id + (p.impro ? " (IMPRO)" : "") }),
+          numNode,
           takes.length ? takeDots(takes) : null),
         el("div", { class: "inline-actions" },
           prep && !readOnly && !p.video ? el("button", { class: "btn-icon btn-video", type: "button", title: "Ajouter une vidéo de référence (Google Drive)", text: "🎞️", onclick: () => pickVideo(p) }) : null,
           prep && !readOnly ? el("button", { class: "btn-icon", type: "button", title: "Supprimer le plan", text: "❌", onclick: () => deletePlan(p.seqId, p.id) }) : null)),
+      editingPlan === key && planError ? el("div", { class: "seq-error", text: planError }) : null,
       p.video ? videoChip(p) : null,
       prep ? textField(p, "info", "Découpage technique (Valeur, action...)", true) : el("div", { class: "plan-info-ro", text: p.info || "…" })),
     isActive ? renderTakeList(p.seqId, p.id) : null);
@@ -844,7 +878,10 @@ function renderShootList() {
         p.video ? el("button", { class: "btn-icon", type: "button", title: "Vidéo de référence", text: "🎞️", onclick: () => previewVideo(p) }) : null,
         p.temps ? el("span", { class: "t-temps-ro", text: p.temps }) : null,
         takes.length ? takeDots(takes) : null),
-      isActive ? el("div", { class: "shoot-takes" }, renderTakeList(p.seqId, p.id)) : null));
+      isActive ? el("div", { class: "shoot-takes" },
+        (() => { const sq = state.sequences.find((x) => x.id === p.seqId); return sq && sq.info ? el("div", { class: "shoot-seq", text: "SÉQ " + sq.id + " · " + sq.info }) : null; })(),
+        p.video ? videoChip(p) : null,
+        renderTakeList(p.seqId, p.id)) : null));
   });
   $("searchCount").textContent = q ? shown + " / " + total + " plans" : total + " plans";
   return list;
@@ -1295,6 +1332,39 @@ $("btnSearch").addEventListener("click", () => {
   if (searchOpen) $("searchInput").focus();
 });
 $("searchInput").addEventListener("input", (e) => { search = e.target.value; render(); });
+
+// --- CLAVIER (téléphone) ---
+// Le champ touché se place juste au-dessus du clavier. En haut, on garde libres la barre de One App
+// (hauteur à confirmer dans One App) et nos éléments collés (tableau de bord en tournage, barre des vues).
+const ONEAPP_BAR = 56;
+function topReserved() {
+  let h = ONEAPP_BAR;
+  if (mode === "shoot") h += $("dashboard").offsetHeight;
+  else h += document.querySelector(".list-tools").offsetHeight;
+  return h + 8;
+}
+function keepAboveKeyboard(field) {
+  if (isDesktop() || !field.isConnected) return;
+  const vv = window.visualViewport;
+  const r = field.getBoundingClientRect();
+  const viewTop = vv ? vv.offsetTop : 0;
+  const viewBottom = vv ? vv.offsetTop + vv.height : window.innerHeight;
+  const top = viewTop + topReserved(), bottom = viewBottom - 12;
+  let delta = 0;
+  if (r.height > bottom - top) delta = r.top - top;          // champ plus haut que la place : on montre son début
+  else if (r.bottom > bottom) delta = r.bottom - bottom;      // caché par le clavier : on remonte
+  else if (r.top < top) delta = r.top - top;                  // caché sous les barres du haut : on descend
+  if (Math.abs(delta) > 2) window.scrollBy({ top: delta, behavior: "smooth" });
+}
+document.addEventListener("focusin", (e) => {
+  const f = e.target;
+  if (!f.matches || !f.matches("textarea, input[type=text], input[type=search], input[type=number], input:not([type])")) return;
+  // Le clavier met un instant à s'ouvrir : on recale à l'ouverture, puis à chaque ligne ajoutée
+  const run = () => keepAboveKeyboard(f);
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", run, { once: true });
+  setTimeout(run, 350);
+});
+document.addEventListener("input", (e) => { if (e.target.matches && e.target.matches("textarea")) keepAboveKeyboard(e.target); });
 
 // Une mise à jour venue d'ailleurs ne remplace pas le champ en cours de saisie
 function isTyping() {
