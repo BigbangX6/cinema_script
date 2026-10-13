@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cinema Script · C · Le cahier</title>
+<meta name="oneapp-icon" content="🎬">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:ital,wght@0,400;0,700;1,400&display=swap">
+<style>
+/* Proposition C : la mise en page que toute l'équipe sait déjà lire, celle du scénario de tournage.
+   Courier, numéros dans les marges, aucune carte ni cadre : la hiérarchie vient du texte seul.
+   « Moteur ! » lance le tournage, « Coupez ! » l'arrête ; la claquette est en bas, sous le pouce. */
+:root {
+  --desk: #e7e7e3; --paper: #ffffff; --ink: #141414; --soft: #6c6c68; --rule: #d6d6d0; --hl: #fff4c2;
+  --red: #d11a2a; --orange: #c86b00; --on-red: #ffffff; --slate: #121212; --slate-ink: #f5f5f0;
+  --av-master: #2e9b4f; --av-ok: #1c74c9; --av-moyen: #8e44ad; --av-bof: #e08a00; --av-ko: #795548; --av-verif: #d6336c;
+  --type: "Courier Prime", "Courier New", Courier, monospace; color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --desk: #0b0b0b; --paper: #161616; --ink: #ecebe6; --soft: #9a9a94; --rule: #2e2e2c; --hl: #3a3313; --av-ko: #a1887f; --orange: #f0a030; color-scheme: dark; } }
+:root[data-theme="dark"] { --desk: #0b0b0b; --paper: #161616; --ink: #ecebe6; --soft: #9a9a94; --rule: #2e2e2c; --hl: #3a3313; --av-ko: #a1887f; --orange: #f0a030; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--desk); color: var(--ink); font-family: var(--type); font-size: 16px; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 2px; }
+.cs-dragging, .cs-dragging * { user-select: none; -webkit-user-select: none; cursor: grabbing !important; }
+
+.sheet { max-width: 780px; margin: 0 auto; background: var(--paper); min-height: 100vh; padding: 0 0 160px; box-shadow: 0 0 0 1px var(--rule); }
+body.moteur .sheet { padding-bottom: 300px; }
+.masthead { position: sticky; top: 0; z-index: 20; background: var(--paper); padding: 14px 18px 0; border-bottom: 1px solid var(--rule); }
+.title { text-align: center; text-transform: uppercase; font-weight: 700; letter-spacing: .08em; text-decoration: underline; text-underline-offset: 4px; font-size: 1rem; }
+.nav { display: flex; align-items: center; justify-content: center; gap: 4px 18px; flex-wrap: wrap; padding: 10px 0 8px; }
+.nav button { border: none; background: none; text-transform: uppercase; letter-spacing: .06em; padding: 6px 0; color: var(--soft); font-size: .9rem; }
+.nav button.on { color: var(--ink); font-weight: 700; text-decoration: underline; text-underline-offset: 6px; text-decoration-thickness: 2px; }
+.nav .moteur { color: var(--red); font-weight: 700; }
+.nav .moteur::before { content: "●"; margin-right: 6px; }
+body.moteur .nav .moteur::before { content: "■"; }
+.find { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 0 0 10px; }
+.find input { border: none; border-bottom: 1px solid var(--ink); background: none; padding: 6px 2px; outline: none; }
+.find small { color: var(--soft); }
+
+.body { padding: 8px 18px 0; }
+@media (min-width: 700px) { .body { padding: 18px 56px 0; } .masthead { padding: 18px 56px 0; } }
+
+/* Découpage : numéros dans les deux marges, comme un scénario de tournage */
+.scene { margin: 26px 0 0; }
+.slug { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr) 3.2rem; align-items: start; }
+.mnum { border: none; background: none; font-weight: 700; padding: 2px 0; text-align: left; font-size: 1rem; }
+.mnum.r { text-align: right; }
+.slug .cs-edit { font-weight: 700; text-transform: uppercase; }
+.shot { display: grid; grid-template-columns: 3.2rem minmax(0, 1fr); align-items: start; margin-top: 12px; }
+.shot .pn { border: none; background: none; text-align: left; padding: 2px 0; color: var(--soft); display: grid; gap: 2px; touch-action: none; }
+.shot .pn b { color: var(--ink); font-weight: 400; }
+.marks { display: flex; gap: 2px; }
+.marks i { width: 6px; height: 6px; border-radius: 50%; background: var(--av); }
+.ref { border: none; background: none; padding: 0; text-decoration: underline; color: var(--soft); font-size: .9rem; }
+.impro { color: var(--orange); }
+.cs-edit { width: 100%; border: none; background: transparent; padding: 2px 0; resize: none; overflow: hidden; line-height: 1.55; outline: none; }
+.cs-edit:focus { background: var(--hl); }
+.blank { color: var(--soft); font-style: italic; margin: 10px 0 0 3.2rem; }
+
+/* Feuille de service */
+.day { margin-top: 30px; }
+.dayline { display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 8px; align-items: baseline; border-bottom: 2px solid var(--ink); padding-bottom: 4px; }
+.dayline .cs-edit, .dayline .dt { text-transform: uppercase; font-weight: 700; }
+.dayline .grip { border: none; background: none; color: var(--soft); touch-action: none; padding: 0 2px; cursor: grab; }
+.dayline small { color: var(--soft); white-space: nowrap; }
+.dayline .x { border: none; background: none; color: var(--soft); }
+.line { display: grid; grid-template-columns: 3.6rem minmax(0, 1fr) 5.2rem; gap: 8px; align-items: start; padding: 10px 0; border-bottom: 1px dotted var(--rule); }
+.line .pn { border: none; background: none; text-align: left; padding: 0; font-weight: 700; touch-action: none; cursor: grab; display: grid; gap: 3px; }
+.line .pn small { font-weight: 400; color: var(--soft); font-size: .72rem; }
+.line .txt { line-height: 1.5; white-space: pre-wrap; }
+.line .txt small { display: block; color: var(--soft); font-size: .78rem; text-transform: uppercase; }
+.line .t { text-align: right; border: none; background: none; padding: 0; width: 100%; color: var(--soft); outline: none; }
+.line .t:focus { background: var(--hl); }
+.line.cur { background: var(--hl); box-shadow: -14px 0 0 var(--hl), 14px 0 0 var(--hl); }
+.line.cur .pn { color: var(--red); }
+.line.done .txt { color: var(--soft); }
+.tag { font-size: .78rem; font-weight: 700; color: var(--red); text-transform: uppercase; display: block; }
+.tag.next { color: var(--ink); }
+body.moteur .line, body.moteur .shot { cursor: pointer; }
+.shot.cur { background: var(--hl); box-shadow: -14px 0 0 var(--hl), 14px 0 0 var(--hl); }
+
+/* Claquette (tournage) : en bas, sous le pouce */
+.clapbar { position: fixed; left: 0; right: 0; bottom: var(--kb, 0px); z-index: 30; display: flex; justify-content: center; }
+.clapbar .inner { width: min(780px, 100%); background: var(--slate); color: var(--slate-ink); padding: 0 14px calc(12px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 8px; }
+.clapbar .stripes { height: 12px; margin: 0 -14px; background: repeating-linear-gradient(-45deg, var(--slate-ink) 0 12px, var(--slate) 12px 24px); }
+.clapbar.impro .stripes { background: repeating-linear-gradient(-45deg, var(--orange) 0 12px, var(--slate) 12px 24px); }
+.cb-top { display: flex; align-items: baseline; gap: 14px; }
+.cb-top .n { font-size: 1.55rem; font-weight: 700; letter-spacing: .02em; }
+.cb-top .n em { font-style: normal; color: #ffd54a; }
+.cb-top .sp { flex: 1; }
+.cb-top button { border: 1px solid rgba(255,255,255,.3); background: none; border-radius: 4px; padding: 4px 8px; text-transform: uppercase; font-size: .78rem; color: inherit; }
+.cb-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.cb-row .clap { border: 2px solid var(--slate-ink); background: var(--slate-ink); color: var(--slate); font-weight: 700; padding: 0 16px; text-transform: uppercase; letter-spacing: .08em; }
+.cb-row input { min-width: 0; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.2); padding: 10px; outline: none; }
+.cb-avis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.av { --av: #888; border: 2px solid var(--av); background: none; color: var(--slate-ink); padding: 5px 0; display: grid; justify-items: center; min-height: 48px; }
+.av span { font-size: 1.15rem; line-height: 1.15; }
+.av b { font-size: .62rem; color: var(--av); text-transform: uppercase; font-weight: 700; }
+.av:active { background: var(--av); }
+.k-master { --av: var(--av-master); } .k-ok { --av: var(--av-ok); } .k-moyen { --av: var(--av-moyen); } .k-bof { --av: var(--av-bof); } .k-ko { --av: var(--av-ko); } .k-verif { --av: var(--av-verif); }
+
+/* Plume flottante */
+.pen { position: fixed; right: 18px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); z-index: 25; width: 60px; height: 60px; border-radius: 50%; border: none; background: var(--ink); color: var(--paper); font-size: 1.8rem; box-shadow: 0 6px 18px rgba(0,0,0,.3); touch-action: none; cursor: grab; }
+body.moteur .pen { display: none; }
+.cs-ghost { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -100%); background: var(--paper); border: 2px solid var(--ink); padding: 4px 10px; font-weight: 700; white-space: nowrap; }
+.cs-line { position: fixed; z-index: 55; pointer-events: none; height: 3px; background: var(--red); }
+.cs-line span { position: absolute; left: 0; top: -22px; background: var(--red); color: var(--on-red); font-size: .8rem; padding: 2px 8px; white-space: nowrap; }
+.cs-into { background: var(--hl) !important; }
+.cs-flash { animation: fl 1.5s ease-out; }
+@keyframes fl { 0%, 35% { background: var(--hl); } }
+@media (prefers-reduced-motion: reduce) { .cs-flash { animation: none; } }
+.cs-toast { position: fixed; left: 50%; transform: translateX(-50%); top: 14px; z-index: 70; background: var(--ink); color: var(--paper); padding: 10px 14px; display: flex; gap: 14px; align-items: center; max-width: min(92vw, 480px); }
+.cs-toast button { border: none; background: none; color: inherit; text-decoration: underline; text-transform: uppercase; font-weight: 700; }
+.cs-modal-back { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.cs-modal { background: var(--paper); width: min(600px, 100%); padding: 18px 18px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; max-height: 88vh; overflow-y: auto; border-top: 3px solid var(--ink); }
+.cs-modal h3 { margin: 0; text-transform: uppercase; font-size: 1rem; text-decoration: underline; text-underline-offset: 4px; }
+.cs-modal p { margin: 0; color: var(--soft); line-height: 1.5; }
+.cs-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.cs-btn { border: 2px solid var(--ink); background: none; padding: 9px 14px; font-weight: 700; text-transform: uppercase; font-size: .85rem; }
+.cs-btn.primary { background: var(--ink); color: var(--paper); }
+.cs-btn.danger { border-color: var(--red); color: var(--red); }
+.cs-btn.impro { background: var(--orange); border-color: var(--orange); color: #000; }
+.cs-input { width: 100%; padding: 10px; border: 2px solid var(--ink); background: none; font-size: 1.1rem; }
+.cs-error { color: var(--red) !important; }
+.cs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-chip { border: 1px solid var(--ink); background: none; padding: 5px 10px; }
+.cs-chip.on { background: var(--orange); border-color: var(--orange); color: #000; }
+.cs-video { aspect-ratio: 16 / 9; max-width: 100%; background: #000; color: #fff; display: grid; place-items: center; font-size: 2.4rem; }
+.menu { display: grid; }
+.menu > button, .menu > .mi { display: flex; gap: 12px; align-items: center; border: none; border-bottom: 1px dotted var(--rule); background: none; padding: 12px 2px; text-align: left; }
+.menu .mi input { width: 80px; border: none; border-bottom: 2px solid var(--ink); background: none; padding: 4px; }
+.menu .danger { color: var(--red); }
+.takes div { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px dotted var(--rule); }
+.takes i { width: 10px; height: 10px; border-radius: 50%; background: var(--av); margin-top: 6px; flex: none; }
+.takes span { flex: 1; }
+.takes small { display: block; color: var(--soft); }
+.takes button { border: none; background: none; color: var(--red); }
+.back { display: block; text-align: center; margin-top: 40px; color: var(--soft); font-size: .85rem; }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <header class="masthead" id="mast">
+    <div class="title" id="proj">Projet</div>
+    <nav class="nav">
+      <button type="button" data-view="decoupage">Découpage</button>
+      <button type="button" data-view="feuille">Feuille de service</button>
+      <button type="button" id="bFind" aria-label="Chercher un plan">Chercher</button>
+      <button type="button" class="moteur" id="bMoteur">Moteur</button>
+    </nav>
+    <div class="find" id="find" hidden>
+      <input type="search" id="q" placeholder="mot, personnage… ou 5 / 5.3" autocomplete="off" aria-label="Chercher">
+      <small id="qn"></small>
+    </div>
+  </header>
+  <main class="body" id="body"></main>
+  <a class="back" href="index.html">← Retour aux propositions</a>
+</div>
+<div class="clapbar" id="clapbar" hidden></div>
+<button class="pen" id="pen" type="button" aria-label="Ajouter" title="Ajouter (toucher) · placer (maintenir et glisser)">+</button>
+
+<script src="core.js"></script>
+<script>
+const { el } = CS;
+const $ = (id) => document.getElementById(id);
+let view = "decoupage";        // decoupage | feuille
+let moteur = false;            // en tournage
+let findOn = false, query = "";
+
+function render() {
+  document.body.classList.toggle("moteur", moteur);
+  $("proj").textContent = CS.projectName();
+  document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("on", b.dataset.view === view));
+  $("bMoteur").textContent = moteur ? "Coupez" : "Moteur";
+  $("bFind").style.textDecoration = findOn ? "underline" : "";
+  $("find").hidden = !findOn;
+  $("pen").hidden = CS.readOnly;
+  $("body").replaceChildren(view === "decoupage" ? renderDecoupage() : renderFeuille());
+  renderClapbar();
+}
+const marks = (p) => { const t = CS.takesOf(p.seqId, p.id); return t.length ? el("span", { class: "marks" }, t.map((x) => el("i", { style: "--av:var(--av-" + CS.avisKey(x.avis) + ")" }))) : null; };
+
+// --- DÉCOUPAGE ---
+function renderDecoupage() {
+  const q = CS.parseQuery(query);
+  const out = el("div");
+  let n = 0, total = 0;
+  CS.seqs().forEach((s) => {
+    const plans = CS.plansOf(s.id), vis = plans.filter((p) => CS.matches(p, q));
+    total += plans.length; n += vis.length;
+    if (q && !vis.length) return;
+    const edit = !moteur;
+    out.append(el("section", { class: "scene", "data-seq": s.id },
+      el("div", { class: "slug" },
+        el("button", { class: "mnum", type: "button", text: String(s.id), title: "Numéro de séquence", onclick: () => seqMenu(s) }),
+        edit ? CS.textField(s, "info", "INT. LIEU – JOUR / personnages") : el("div", { style: "font-weight:700;text-transform:uppercase;white-space:pre-wrap", text: s.info }),
+        el("button", { class: "mnum r", type: "button", text: String(s.id), tabindex: "-1", "aria-hidden": "true", onclick: () => seqMenu(s) })),
+      vis.length ? vis.map((p) => el("div", { class: "shot" + (CS.isActive(p) ? " cur" : ""), "data-seq": p.seqId, "data-plan": p.id, onclick: moteur ? () => { CS.active = { seqId: p.seqId, planId: p.id }; render(); } : null },
+        el("button", { class: "pn", type: "button", title: "Numéro, vidéo, prises", onclick: (e) => { if (!moteur) planMenu(p); } }, el("b", { text: CS.key(p) }), marks(p)),
+        el("div", {},
+          edit ? CS.textField(p, "info", "Décrire le plan…") : el("div", { style: "white-space:pre-wrap;line-height:1.55", text: p.info || "…" }),
+          p.impro ? el("span", { class: "impro", text: "(impro) " }) : null,
+          p.video ? el("button", { class: "ref", type: "button", text: "▶ vidéo de référence", onclick: (e) => { e.stopPropagation(); CS.previewVideo(p); } }) : null)))
+        : el("div", { class: "blank", text: "(pas encore de plan)" })));
+  });
+  $("qn").textContent = q ? n + " / " + total : "";
+  return out;
+}
+
+// --- FEUILLE DE SERVICE (ordre de tournage) ---
+function renderFeuille() {
+  const q = CS.parseQuery(query);
+  const last = CS.lastTake(), next = CS.nextToShoot();
+  const out = el("div");
+  let n = 0, total = 0;
+  CS.days().forEach((g) => {
+    const vis = g.items.filter(({ p }) => CS.matches(p, q));
+    total += g.items.length; n += vis.length;
+    if (q && !vis.length) return;
+    const mins = CS.dayMinutes(g);
+    out.append(el("section", { class: "day", "data-day": g.index },
+      el("div", { class: "dayline" },
+        g.sep && !moteur && !CS.readOnly ? el("button", { class: "grip", type: "button", text: "⠿", "aria-label": "Déplacer la journée", onpointerdown: (e) => CS.beginDrag(e, moveDayOpt(g.index, g.sep.text || "journée")) }) : el("span"),
+        g.sep && !moteur ? el("input", { class: "cs-edit", type: "text", value: g.sep.text || "", placeholder: "JOUR · LIEU", readonly: CS.readOnly, "aria-label": "Nom de la journée", oninput: (e) => { g.sep.text = e.target.value; CS.saveSoon(); }, onchange: CS.saveNow })
+          : el("span", { class: "dt", text: g.sep ? g.sep.text || "Journée" : "À placer" }),
+        el("small", { text: (mins ? CS.fmtMin(mins) : "") + (moteur ? " · " + g.items.filter(({ p }) => CS.takesOf(p.seqId, p.id).length).length + "/" + g.items.length : "") }),
+        g.sep && !moteur && !CS.readOnly ? el("button", { class: "x", type: "button", text: "✕", title: "Supprimer la journée (ses plans rejoignent la précédente)", onclick: () => CS.deleteDay(g.index) }) : el("span")),
+      vis.map(({ index, p }) => {
+        const isLast = last && last.seqId === p.seqId && last.planId === p.id;
+        return el("div", { class: "line" + (CS.isActive(p) ? " cur" : "") + (moteur && CS.takesOf(p.seqId, p.id).length && !CS.isActive(p) ? " done" : ""), "data-index": index, "data-key": CS.key(p),
+            onclick: moteur ? () => { CS.active = { seqId: p.seqId, planId: p.id }; render(); } : null },
+          el("button", { class: "pn", type: "button", title: moteur ? "Tourner ce plan" : "Toucher : options · maintenir et glisser : déplacer",
+              onpointerdown: moteur || CS.readOnly ? null : (e) => CS.beginDrag(e, moveOpt(index, CS.key(p), p)) },
+            el("span", { class: p.impro ? "impro" : "", text: CS.key(p) }), marks(p)),
+          el("div", { class: "txt" },
+            moteur && isLast ? el("span", { class: "tag", text: "Dernière prise · " + last.prise }) : moteur && next === p ? el("span", { class: "tag next", text: "▶ À suivre" }) : null,
+            p.info || "…", el("small", { text: CS.seqTitle(p.seqId) })),
+          moteur ? el("span", { class: "t", text: p.temps || "" })
+            : el("input", { class: "t", type: "text", value: p.temps || "", placeholder: "temps", readonly: CS.readOnly, "aria-label": "Temps du plan " + CS.key(p), oninput: (e) => { p.temps = e.target.value; CS.saveSoon(); }, onchange: () => { CS.saveNow(); render(); } }));
+      })));
+  });
+  $("qn").textContent = q ? n + " / " + total : "";
+  return out;
+}
+
+// --- CLAQUETTE ---
+function renderClapbar() {
+  const bar = $("clapbar");
+  const p = moteur ? CS.activePlan() : null;
+  bar.hidden = !p;
+  if (!p) return bar.replaceChildren();
+  const n = CS.nextTake(p.seqId, p.id);
+  const com = el("input", { id: "com", type: "text", placeholder: "note, raccord…", autocomplete: "off", "aria-label": "Commentaire" });
+  bar.className = "clapbar" + (p.impro ? " impro" : "");
+  bar.replaceChildren(el("div", { class: "inner" },
+    el("div", { class: "stripes" }),
+    el("div", { class: "cb-top" },
+      el("span", { class: "n" }, "S" + p.seqId + " · P" + p.id + " · ", el("em", { text: "T" + n })),
+      el("span", { class: "sp" }),
+      CS.readOnly ? null : el("button", { type: "button", text: "⚡ impro", onclick: () => CS.improDialog(p.seqId, null, () => render()) }),
+      el("button", { type: "button", text: "Prises", onclick: () => planMenu(p) })),
+    el("div", { class: "cb-row" }, el("button", { class: "clap", type: "button", text: "Clap", onclick: CS.clap }), com),
+    el("div", { class: "cb-avis" }, CS.AVIS_BUTTONS.map((a) => el("button", { class: "av k-" + a.k, type: "button", disabled: CS.readOnly, title: a.label + " : enregistrer la prise", onclick: () => CS.saveTake(a.label, com.value) }, el("span", { text: a.e }), el("b", { text: a.s }))))));
+}
+// La claquette reste au-dessus du clavier quand on écrit une note
+if (window.visualViewport) {
+  const fit = () => { const vv = window.visualViewport; document.documentElement.style.setProperty("--kb", Math.max(0, window.innerHeight - vv.height - vv.offsetTop) + "px"); };
+  window.visualViewport.addEventListener("resize", fit);
+  window.visualViewport.addEventListener("scroll", fit);
+}
+
+// --- MENUS ---
+function planMenu(p) {
+  CS.modal("Plan " + CS.key(p), (close) => {
+    const num = el("input", { type: "number", inputmode: "numeric", min: "1", value: String(p.id), "aria-label": "Numéro du plan" });
+    const err = el("small", { class: "cs-error" });
+    const setNum = async () => { const r = await CS.setPlanNum(p.seqId, p.id, num.value); if (r) err.textContent = r; else close(); };
+    num.addEventListener("keydown", (e) => { if (e.key === "Enter") setNum(); });
+    const takes = CS.takesOf(p.seqId, p.id);
+    return [
+      el("div", { class: "menu" },
+        CS.readOnly || moteur ? null : el("div", { class: "mi" }, "Numéro", num, el("button", { class: "cs-btn", type: "button", text: "OK", onclick: setNum }), err),
+        p.video ? el("button", { type: "button", onclick: () => { close(); CS.previewVideo(p); } }, "▶ Voir la vidéo de référence")
+          : CS.readOnly || moteur ? null : el("button", { type: "button", onclick: () => { close(); CS.pickVideo(p); } }, "▶ Lier une vidéo de référence (Drive)"),
+        CS.readOnly || moteur ? null : el("button", { class: "danger", type: "button", onclick: () => { close(); CS.deletePlan(p.seqId, p.id); } }, "Supprimer le plan (les suivants remontent)")),
+      takes.length ? el("div", { class: "takes" }, takes.map((t) => el("div", { style: "--av:var(--av-" + CS.avisKey(t.avis) + ")" }, el("i"),
+        el("span", {}, "Prise " + t.prise + " · " + t.avis, t.com ? el("small", { text: t.com }) : null),
+        CS.readOnly ? null : el("button", { type: "button", text: "✕", title: "Supprimer la prise", onclick: () => { CS.deleteTake(t.uid); close(); planMenu(p); } })))) : el("p", { text: "Aucune prise." })
+    ];
+  });
+}
+function seqMenu(s) {
+  if (moteur || CS.readOnly) return;
+  CS.modal("Séquence " + s.id, (close) => {
+    const num = el("input", { type: "number", inputmode: "numeric", min: "1", value: String(s.id), "aria-label": "Numéro de la séquence" });
+    const err = el("small", { class: "cs-error" });
+    const setNum = async () => { const v = parseInt(num.value, 10); const r = await CS.setSeqNum(s.id, num.value); if (r) err.textContent = r; else { close(); CS.afterRender({ scroll: `.scene[data-seq="${v}"]`, flash: `.scene[data-seq="${v}"] .slug` }); CS.render(); } };
+    num.addEventListener("keydown", (e) => { if (e.key === "Enter") setNum(); });
+    return [el("div", { class: "menu" },
+      el("div", { class: "mi" }, "Numéro", num, el("button", { class: "cs-btn", type: "button", text: "OK", onclick: setNum }), err),
+      el("button", { class: "danger", type: "button", onclick: () => { close(); CS.deleteSeq(s.id); } }, "Supprimer la séquence et ses plans")),
+      el("p", { text: "Les numéros de séquence peuvent sauter (1, 2, 5…)." })];
+  });
+}
+
+// --- PLUME : toucher = choisir, maintenir et glisser = placer ---
+const mastH = () => $("mast").offsetHeight;
+const focusPlan = (p) => { if (p) { CS.afterRender({ scroll: `.shot[data-seq="${p.seqId}"][data-plan="${p.id}"]`, focus: `.shot[data-seq="${p.seqId}"][data-plan="${p.id}"] textarea` }); CS.render(); } };
+const focusSeq = (id) => { if (id) { CS.afterRender({ scroll: `.scene[data-seq="${id}"]`, focus: `.scene[data-seq="${id}"] .slug textarea` }); CS.render(); } };
+const focusDay = (at) => { CS.afterRender({ scroll: `.day[data-day="${at}"]`, focus: `.day[data-day="${at}"] input` }); CS.render(); };
+function penMenu() {
+  const seqs = CS.seqs(), last = seqs[seqs.length - 1];
+  CS.modal("Ajouter", (close) => [el("div", { class: "menu" },
+    view === "decoupage" ? [
+      el("button", { type: "button", onclick: async () => { close(); focusSeq(await CS.insertSeq(last ? last.id : 0)); } }, "Une séquence, à la fin"),
+      last ? el("button", { type: "button", onclick: async () => { close(); focusPlan(await CS.insertPlan(last.id, CS.plansOf(last.id).length)); } }, "Un plan, à la fin de la séquence " + last.id) : null
+    ] : el("button", { type: "button", onclick: () => { close(); focusDay(CS.insertDay(CS.state.tournageList.length)); } }, "Une journée, à la fin")),
+    el("p", { text: "Pour choisir l'endroit : maintenez + et glissez-le dans la page. Un trait rouge montre où il sera posé." })]);
+}
+function penOpt() {
+  return { label: "+", topInset: mastH, onTap: penMenu,
+    resolve: (x, y, under) => {
+      if (view === "decoupage") {
+        const shot = under.closest(".shot");
+        if (shot) {
+          const seqId = +shot.dataset.seq, id = +shot.dataset.plan, h = CS.half(shot, y), pos = id - 1 + (h.before ? 0 : 1);
+          return { ...h, text: "plan " + seqId + "." + (pos + 1), run: async () => focusPlan(await CS.insertPlan(seqId, pos)) };
+        }
+        const sc = under.closest(".scene");
+        if (sc) {
+          const seqId = +sc.dataset.seq, slug = sc.querySelector(".slug"), h = CS.half(slug, y);
+          if (under.closest(".slug") && h.before) {
+            const seqs = CS.seqs(), i = seqs.findIndex((s) => s.id === seqId), afterId = i > 0 ? seqs[i - 1].id : 0;
+            return { rect: sc.getBoundingClientRect(), before: true, text: "séquence " + (afterId + 1), run: async () => focusSeq(await CS.insertSeq(afterId)) };
+          }
+          return { rect: slug.getBoundingClientRect(), before: false, text: "plan " + seqId + ".1", run: async () => focusPlan(await CS.insertPlan(seqId, 0)) };
+        }
+        const all = [...document.querySelectorAll(".scene")], lastSc = all[all.length - 1];
+        if (lastSc && y > lastSc.getBoundingClientRect().bottom) {
+          const s = CS.seqs(), afterId = s.length ? s[s.length - 1].id : 0;
+          return { rect: lastSc.getBoundingClientRect(), before: false, text: "séquence " + (afterId + 1), run: async () => focusSeq(await CS.insertSeq(afterId)) };
+        }
+        return null;
+      }
+      const line = under.closest(".line");
+      if (line) { const h = CS.half(line, y), at = +line.dataset.index + (h.before ? 0 : 1); return { ...h, text: "nouvelle journée", run: () => focusDay(CS.insertDay(at)) }; }
+      return null;
+    } };
+}
+// Le numéro du plan sert de poignée : toucher = menu, glisser = déplacer
+function moveOpt(from, label, p) {
+  return { label, armed: true, topInset: mastH, onTap: () => planMenu(p),
+    resolve: (x, y, under) => {
+      const line = under.closest(".line");
+      if (line) {
+        const h = CS.half(line, y), at = +line.dataset.index + (h.before ? 0 : 1);
+        if (at === from || at === from + 1) return null;
+        return { ...h, text: "ici", run: () => { const to = CS.moveItem(from, at); CS.afterRender({ flash: `.line[data-index="${to}"]` }); CS.render(); } };
+      }
+      const day = under.closest(".day");
+      if (day && day.dataset.day !== "-1") {
+        const sep = +day.dataset.day, dl = day.querySelector(".dayline"), at = sep + 1;
+        if (at === from || at === from + 1) return null;
+        return { rect: dl.getBoundingClientRect(), before: false, into: dl, text: "en tête de journée", run: () => CS.moveItem(from, at) };
+      }
+      return null;
+    } };
+}
+function moveDayOpt(from, label) {
+  return { label: label.toUpperCase(), armed: true, topInset: mastH,
+    resolve: (x, y, under) => {
+      const day = under.closest(".day");
+      if (!day || day.dataset.day === "-1") return null;
+      const sep = +day.dataset.day, h = CS.half(day, y, 40), at = h.before ? sep : CS.dayEnd(sep);
+      if (at >= from && at <= CS.dayEnd(from)) return null;
+      return { ...h, text: "journée ici", run: () => CS.moveDay(from, at) };
+    } };
+}
+
+// --- ÉVÉNEMENTS ---
+$("pen").addEventListener("pointerdown", (e) => CS.beginDrag(e, penOpt()));
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { view = b.dataset.view; window.scrollTo(0, 0); render(); }));
+$("bFind").addEventListener("click", () => { findOn = !findOn; if (!findOn) { query = ""; $("q").value = ""; } render(); if (findOn) $("q").focus(); });
+$("q").addEventListener("input", (e) => { query = e.target.value; render(); });
+$("bMoteur").addEventListener("click", () => {
+  moteur = !moteur;
+  if (moteur) {
+    view = "feuille";
+    const last = CS.lastTake();
+    if (!CS.activePlan() && last) CS.active = { seqId: last.seqId, planId: last.planId };
+    const a = CS.activePlan();
+    if (a) CS.afterRender({ scroll: `.line[data-key="${CS.key(a)}"]` });
+  }
+  CS.render();
+});
+CS.keyboard(mastH);
+CS.boot(render);
+</script>
+</body>
+</html>

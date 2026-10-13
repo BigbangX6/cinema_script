@@ -1,0 +1,142 @@
+<title>Cinema Script · Trois propositions</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Page de présentation : trois colonnes de propositions (une seule sur téléphone), chacune avec ses deux écrans et ses raisons. */
+:root {
+  --bg: #f2f2ef; --paper: #ffffff; --ink: #151515; --soft: #63635f; --rule: #dcdcd6;
+  --a: #2aa889; --b: #1f6feb; --c: #d11a2a;
+  --type: "Courier Prime", "Courier New", Courier, monospace;
+  --body: system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg: #0e0e0e; --paper: #181818; --ink: #eeede8; --soft: #a2a29c; --rule: #2e2e2c; --a: #50e3c2; --b: #5aa2ff; --c: #ff5a63; color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #0e0e0e; --paper: #181818; --ink: #eeede8; --soft: #a2a29c; --rule: #2e2e2c; --a: #50e3c2; --b: #5aa2ff; --c: #ff5a63; color-scheme: dark; }
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 16px; line-height: 1.55; }
+.wrap { max-width: 1240px; margin: 0 auto; padding-inline: 18px; padding-block: 32px 64px; display: grid; gap: 36px; }
+h1, h2, h3 { margin: 0; line-height: 1.15; text-wrap: balance; }
+h1 { font-family: var(--type); font-size: clamp(1.7rem, 4vw, 2.5rem); text-transform: uppercase; letter-spacing: .03em; }
+h2 { font-size: 1.35rem; }
+h3 { font-family: var(--type); font-size: .82rem; text-transform: uppercase; letter-spacing: .1em; color: var(--soft); font-weight: 700; }
+p { margin: 0; }
+.lede { max-width: 70ch; color: var(--soft); font-size: 1.05rem; }
+.kicker { font-family: var(--type); text-transform: uppercase; letter-spacing: .12em; font-size: .85rem; color: var(--soft); }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+.common { background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 18px; display: grid; gap: 10px; }
+.common ul { grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); column-gap: 28px; }
+
+.props { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; align-items: start; }
+.prop { background: var(--paper); border: 1px solid var(--rule); border-top: 6px solid var(--k); border-radius: 12px; padding: 18px; display: grid; gap: 14px; min-width: 0; }
+.prop.a { --k: var(--a); } .prop.b { --k: var(--b); } .prop.c { --k: var(--c); }
+.letter { font-family: var(--type); font-weight: 700; color: var(--k); font-size: .9rem; letter-spacing: .1em; }
+.idea { font-size: 1.05rem; }
+.shots { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.shots figure { margin: 0; display: grid; gap: 4px; }
+.shots img { width: 100%; max-width: 100%; border-radius: 10px; border: 1px solid var(--rule); display: block; }
+.shots figcaption { font-size: .78rem; color: var(--soft); text-align: center; }
+.bet { border-left: 4px solid var(--k); padding: 4px 0 4px 12px; display: grid; gap: 4px; }
+.bet b { font-family: var(--type); text-transform: uppercase; font-size: .85rem; letter-spacing: .06em; }
+.open { display: inline-block; justify-self: start; background: var(--k); color: var(--paper); text-decoration: none; font-weight: 700; padding: 11px 18px; border-radius: 10px; }
+.sec { display: grid; gap: 6px; }
+
+.table-wrap { overflow-x: auto; background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; }
+table { border-collapse: collapse; width: 100%; min-width: 720px; font-size: .95rem; }
+th, td { text-align: left; vertical-align: top; padding: 11px 14px; border-bottom: 1px solid var(--rule); }
+thead th { font-family: var(--type); text-transform: uppercase; font-size: .8rem; letter-spacing: .08em; }
+thead th.a { color: var(--a); } thead th.b { color: var(--b); } thead th.c { color: var(--c); }
+tbody th { font-weight: 600; color: var(--soft); width: 20%; }
+tr:last-child td, tr:last-child th { border-bottom: none; }
+
+.reco { background: var(--paper); border: 1px solid var(--rule); border-radius: 12px; padding: 18px; display: grid; gap: 10px; max-width: 80ch; }
+</style>
+
+<div class="wrap">
+  <header style="display:grid;gap:12px">
+    <div class="kicker">Cinema Script · maquettes v3</div>
+    <h1>Trois façons d'en mettre moins</h1>
+    <p class="lede">Le but : qu'une personne qui découvre l'app comprenne tout de suite quoi toucher. Les trois propositions font la même chose, avec les mêmes données et les mêmes règles. Seule la manière de le présenter change. Toutes se manipulent sur téléphone comme sur ordinateur.</p>
+  </header>
+
+  <section class="common">
+    <h2>Ce que j'ai retiré partout, et pourquoi</h2>
+    <ul>
+      <li><b>Deux niveaux de boutons de mode</b> (Préparation/Tournage, puis Découpage/Plan de travail…). Quatre combinaisons, c'est trop pour une première fois.</li>
+      <li><b>Les cadres de saisie partout.</b> Le texte s'affiche comme du texte et devient modifiable au toucher. Il redevient l'élément principal.</li>
+      <li><b>Les boutons ✎ 🎞️ ❌ sur chaque plan.</b> Ils passent dans un menu qu'on ouvre en touchant le numéro du plan.</li>
+      <li><b>Les boutons PDF permanents.</b> Ils servent deux fois par tournage : ils vont dans un menu.</li>
+      <li><b>Les boutons flottants à glisser.</b> Gardés, mais un simple appui ajoute aussi l'élément à la fin et rappelle le geste. Un nouveau venu y arrive, et vous gardez le glisser.</li>
+      <li><b>La règle des numéros reste la même :</b> plans toujours 1, 2, 3…, séquences avec trous permis, prises jamais renumérotées.</li>
+    </ul>
+  </section>
+
+  <section class="props">
+    <article class="prop a">
+      <div class="letter">PROPOSITION A</div>
+      <h2>Une seule liste</h2>
+      <p class="idea">Il n'y a plus de mode. Une liste unique se trie « Scénario » ou « Tournage ». Pour tourner un plan, on touche son 🎬 : la barre de clap apparaît en haut.</p>
+      <div class="shots">
+        <figure><img src="captures/a-prepa.png" alt="Proposition A, liste dans l'ordre du scénario"><figcaption>Scénario</figcaption></figure>
+        <figure><img src="captures/a-tournage.png" alt="Proposition A, ordre de tournage avec la barre de clap"><figcaption>Tournage, plan armé</figcaption></figure>
+      </div>
+      <div class="bet"><b>Le pari</b><p>Supprimer la notion de mode. La scripte n'« entre » pas en tournage : elle arme un plan.</p></div>
+      <div class="sec"><h3>Pourquoi</h3><p>Une seule chose à apprendre : la liste. Chaque plan est le même composant partout (numéro, texte, 🎬), avec la même couleur de séquence dans les deux ordres. On reconnaît un plan d'un coup d'œil. Un seul bouton « + » : il crée une séquence, un plan ou une journée selon l'endroit où on le lâche, et le trait annonce ce qui va être créé.</p></div>
+      <div class="sec"><h3>Ce qu'on y perd</h3><p>Le texte reste modifiable même au plateau. Sans mode, on peut changer un texte par erreur, mais One App sait revenir en arrière.</p></div>
+      <a class="open" href="a-une-liste.html">Ouvrir la maquette A</a>
+    </article>
+
+    <article class="prop b">
+      <div class="letter">PROPOSITION B</div>
+      <h2>Trois écrans</h2>
+      <p class="idea">Des onglets en bas, comme dans une app de téléphone : Découpage, Plan de travail, Plateau. Chaque écran a un seul métier et le dit en une phrase.</p>
+      <div class="shots">
+        <figure><img src="captures/b-prepa.png" alt="Proposition B, écran Découpage"><figcaption>Découpage</figcaption></figure>
+        <figure><img src="captures/b-tournage.png" alt="Proposition B, écran Plateau"><figcaption>Plateau</figcaption></figure>
+      </div>
+      <div class="bet"><b>Le pari</b><p>Au plateau, la liste disparaît. On ne voit que le plan en cours, en grand, comme sur une claquette. On passe au suivant avec ◀ ▶ ou avec les pastilles de la journée.</p></div>
+      <div class="sec"><h3>Pourquoi</h3><p>C'est le modèle que tout le monde connaît déjà sur téléphone. Les actions d'un plan (numéro, vidéo, supprimer) n'apparaissent que quand on écrit dedans. Dans le plan de travail, on ne voit qu'une journée à la fois : on glisse un plan sur la pastille d'une autre journée pour l'y envoyer. Au plateau, les boutons d'avis sont grands, et « Où en est-on dans l'histoire ? » ouvre le scénario sur le plan en cours.</p></div>
+      <div class="sec"><h3>Ce qu'on y perd</h3><p>Moins de vue d'ensemble au plateau, et trois endroits différents pour retrouver un plan.</p></div>
+      <a class="open" href="b-trois-ecrans.html">Ouvrir la maquette B</a>
+    </article>
+
+    <article class="prop c">
+      <div class="letter">PROPOSITION C</div>
+      <h2>Le cahier</h2>
+      <p class="idea">La mise en page d'un scénario de tournage : police Courier, numéros dans les marges, aucune carte ni cadre. « Moteur » lance le tournage, « Coupez » l'arrête.</p>
+      <div class="shots">
+        <figure><img src="captures/c-prepa.png" alt="Proposition C, découpage en mise en page de scénario"><figcaption>Découpage</figcaption></figure>
+        <figure><img src="captures/c-tournage.png" alt="Proposition C, feuille de service et claquette en bas"><figcaption>Moteur !</figcaption></figure>
+      </div>
+      <div class="bet"><b>Le pari</b><p>Pas d'interface, seulement de la typographie. La claquette du tournage est en bas de l'écran, sous le pouce, et non en haut.</p></div>
+      <div class="sec"><h3>Pourquoi</h3><p>Toute l'équipe sait déjà lire cette page : c'est celle qu'elle a dans les mains depuis la préparation. Le vocabulaire est celui du plateau (feuille de service, moteur, coupez). En bas, la claquette se manipule d'une main et n'entre pas en conflit avec la barre de One App en haut. Le numéro du plan sert de poignée : toucher ouvre le menu, glisser déplace le plan.</p></div>
+      <div class="sec"><h3>Ce qu'on y perd</h3><p>Moins de couleur pour se repérer, et un style très marqué qui peut plaire ou non.</p></div>
+      <a class="open" href="c-le-cahier.html">Ouvrir la maquette C</a>
+    </article>
+  </section>
+
+  <section style="display:grid;gap:12px">
+    <h2>Côte à côte</h2>
+    <div class="table-wrap">
+      <table>
+        <thead><tr><th></th><th class="a">A · Une seule liste</th><th class="b">B · Trois écrans</th><th class="c">C · Le cahier</th></tr></thead>
+        <tbody>
+          <tr><th>À apprendre</th><td>Une liste, deux ordres</td><td>Trois onglets</td><td>Deux pages + Moteur</td></tr>
+          <tr><th>Lancer le clap</th><td>🎬 sur n'importe quel plan</td><td>Onglet Plateau</td><td>Moteur, puis toucher un plan</td></tr>
+          <tr><th>Barre de clap</th><td>En haut, collée</td><td>Plein écran</td><td>En bas, sous le pouce</td></tr>
+          <tr><th>Créer</th><td>Un seul +, selon l'endroit</td><td>Boutons nommés (+ Séquence, + Plan, + Journée)</td><td>Un seul +</td></tr>
+          <tr><th>Changer de journée</th><td>Glisser dans la liste</td><td>Glisser sur une pastille de journée</td><td>Glisser par le numéro</td></tr>
+          <tr><th>L'histoire au plateau</th><td>Trier « Scénario »</td><td>« Où en est-on dans l'histoire ? »</td><td>Page Découpage, plan en cours surligné</td></tr>
+          <tr><th>Pour un nouveau venu</th><td>Très simple, peu de surprises</td><td>Le plus familier</td><td>Évident pour l'équipe film, déroutant pour les autres</td></tr>
+          <tr><th>Risque</th><td>Pas de mode tournage</td><td>Liste cachée au plateau</td><td>Style marqué, clap en bas</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="reco">
+    <h2>Mon avis</h2>
+    <p><b>A</b> est la plus proche de ce qui vous plaît déjà (le mode scénario), avec le moins de choses à apprendre. <b>B</b> est la plus rassurante pour quelqu'un qui n'a jamais vu l'app. <b>C</b> est la plus audacieuse et la plus « cinéma ».</p>
+    <p>On peut aussi mélanger les idées : la liste unique de A, le plateau plein écran de B quand on arme un plan, et le vocabulaire et la typographie de C. Les trois fonctionnent sur le même moteur : combiner coûte peu.</p>
+  </section>
+</div>

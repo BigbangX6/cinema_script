@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cinema Script · B · Trois écrans</title>
+<meta name="oneapp-icon" content="🎬">
+<style>
+/* Proposition B : trois écrans, un métier chacun (onglets en bas, comme une app de téléphone).
+   Les actions n'apparaissent que sur l'élément qu'on touche. Le plateau n'affiche que le plan en cours. */
+:root {
+  --bg: #f3f4f6; --panel: #ffffff; --panel-2: #f1f3f5; --line: #e1e4e8; --text: #16181b; --muted: #6b7178;
+  --accent: #1f6feb; --on-accent: #ffffff; --orange: #e8890c; --red: #d93036; --ok: #2e9b4f; --tab: #ffffff;
+  --av-master: #2e9b4f; --av-ok: #1c74c9; --av-moyen: #8e44ad; --av-bof: #e8890c; --av-ko: #795548; --av-verif: #d6336c;
+  --slate: #15171a; --slate-text: #f6f6f4; --shadow: 0 8px 28px rgba(16,24,40,.12); color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1113; --panel: #1a1d20; --panel-2: #22262a; --line: #2d3236; --text: #eef1f3; --muted: #8e979e; --accent: #4c9aff; --on-accent: #06172e; --tab: #16191c;
+  --av-ko: #a1887f; --slate: #050607; --shadow: 0 8px 28px rgba(0,0,0,.5); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #0f1113; --panel: #1a1d20; --panel-2: #22262a; --line: #2d3236; --text: #eef1f3; --muted: #8e979e; --accent: #4c9aff; --on-accent: #06172e; --tab: #16191c; --av-ko: #a1887f; --slate: #050607; --shadow: 0 8px 28px rgba(0,0,0,.5); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", sans-serif; font-size: 16px; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-dragging, .cs-dragging * { user-select: none; -webkit-user-select: none; cursor: grabbing !important; }
+.page { max-width: 760px; margin: 0 auto; padding: 14px 14px calc(150px + env(safe-area-inset-bottom, 0px)); }
+.head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 12px; }
+.head h1 { margin: 0; font-size: 1.5rem; }
+.head p { margin: 2px 0 0; color: var(--muted); font-size: .9rem; }
+.head .grow { flex: 1; min-width: 0; }
+.ic { width: 42px; height: 42px; border-radius: 50%; border: 1px solid var(--line); background: var(--panel); flex: none; }
+.ic.on { border-color: var(--accent); }
+
+/* Onglets */
+.tabs { position: fixed; left: 0; right: 0; bottom: 0; z-index: 40; background: var(--tab); border-top: 1px solid var(--line); display: grid; grid-template-columns: repeat(3, 1fr); padding-bottom: env(safe-area-inset-bottom, 0px); }
+.tabs button { border: none; background: none; padding: 9px 4px 10px; display: grid; justify-items: center; gap: 2px; color: var(--muted); font-size: .78rem; font-weight: 600; }
+.tabs button span { font-size: 1.35rem; line-height: 1.2; }
+.tabs button.on { color: var(--accent); }
+.tabs button.on span { transform: scale(1.1); }
+
+/* Boutons de création (au-dessus des onglets) */
+.adders { position: fixed; right: 14px; bottom: calc(76px + env(safe-area-inset-bottom, 0px)); z-index: 35; display: flex; gap: 8px; }
+.adder { border: none; border-radius: 22px; padding: 12px 16px; font-weight: 700; background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow); touch-action: none; cursor: grab; }
+.adder.alt { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+
+/* Découpage */
+.seq { margin-bottom: 22px; }
+.seq-head { background: var(--panel); border-radius: 14px; padding: 12px 14px; display: grid; gap: 6px; border-top: 4px solid var(--c); box-shadow: 0 1px 0 var(--line); }
+.label { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); display: flex; align-items: center; gap: 8px; }
+.label b { font-size: 1.25rem; color: var(--c, var(--text)); letter-spacing: 0; }
+.seq-head .cs-edit { font-weight: 700; font-size: 1.1rem; }
+.plans { display: grid; gap: 8px; margin: 8px 0 0 14px; }
+.plan { background: var(--panel); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; border-left: 4px solid var(--c); }
+.tools { display: none; gap: 6px; flex-wrap: wrap; padding-top: 4px; }
+.plan:focus-within .tools, .seq-head:focus-within .tools { display: flex; }
+.tool { border: 1px solid var(--line); background: var(--panel-2); border-radius: 18px; padding: 6px 12px; font-size: .85rem; font-weight: 600; }
+.tool.danger { color: var(--red); }
+.cs-edit { width: 100%; border: none; background: transparent; padding: 2px 0; resize: none; overflow: hidden; line-height: 1.5; font-size: 1.06rem; }
+.cs-edit:focus { outline: none; }
+.vid { display: inline-flex; gap: 8px; align-items: center; border: none; background: var(--panel-2); border-radius: 8px; padding: 4px 10px 4px 4px; font-size: .85rem; max-width: 100%; justify-self: start; }
+.vid i { width: 40px; height: 24px; border-radius: 4px; background: linear-gradient(135deg, #0f2027, #2c5364); color: #fff; display: grid; place-items: center; font-style: normal; font-size: .7rem; flex: none; }
+.vid span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--av); }
+.empty { color: var(--muted); font-style: italic; padding: 8px 2px; }
+
+/* Plan de travail */
+.chips { position: sticky; top: 0; z-index: 10; background: var(--bg); display: flex; gap: 8px; overflow-x: auto; padding: 4px 0 10px; scrollbar-width: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--panel); border-radius: 20px; padding: 8px 14px; font-weight: 600; white-space: nowrap; }
+.chip small { color: var(--muted); font-weight: 500; margin-left: 4px; }
+.chip.on { background: var(--text); color: var(--bg); border-color: var(--text); }
+.chip.on small { color: inherit; opacity: .7; }
+.chip.warn { border-style: dashed; }
+.dayhead { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; align-items: center; background: var(--panel); border-radius: 12px; padding: 10px 12px; margin-bottom: 10px; }
+.dayhead input { font-weight: 700; font-size: 1.15rem; }
+.dayhead small { grid-column: 1 / -1; color: var(--muted); }
+.daytitle { font-weight: 700; color: var(--muted); font-size: .85rem; text-transform: uppercase; letter-spacing: .06em; margin: 16px 0 8px; }
+.rows { display: grid; gap: 8px; }
+.row { background: var(--panel); border-radius: 12px; padding: 10px 12px 10px 4px; display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 8px; align-items: start; border-left: 4px solid var(--c); }
+.row.impro { box-shadow: inset 0 -3px 0 var(--orange); }
+.handle { touch-action: none; user-select: none; border: none; background: none; color: var(--muted); font-size: 1.3rem; padding: 4px 4px; cursor: grab; }
+.code { font-weight: 800; color: var(--c); min-width: 40px; padding-top: 2px; }
+.rtext { line-height: 1.45; font-size: 1.04rem; white-space: pre-wrap; }
+.rtext small { display: block; color: var(--muted); font-size: .8rem; }
+.temps { width: 84px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-size: .85rem; }
+.search { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-bottom: 10px; }
+.search input { padding: 11px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+.search small { color: var(--muted); }
+
+/* Plateau */
+.stage { display: grid; gap: 12px; }
+@media (min-width: 900px) { .page.wide { max-width: 1180px; } .stage { grid-template-columns: minmax(0, 1.1fr) minmax(0, .9fr); align-items: start; } .day-side { position: sticky; top: 14px; } }
+.slate { background: var(--slate); color: var(--slate-text); border-radius: 18px; overflow: hidden; }
+.stripes { height: 14px; background: repeating-linear-gradient(-45deg, var(--slate-text) 0 14px, var(--slate) 14px 28px); }
+.slate.impro .stripes { background: repeating-linear-gradient(-45deg, var(--orange) 0 14px, var(--slate) 14px 28px); }
+.sl-body { padding: 12px 16px 16px; display: grid; gap: 8px; }
+.sl-nums { display: flex; align-items: baseline; gap: 14px; }
+.sl-nums div { display: grid; }
+.sl-nums small { font-size: .7rem; letter-spacing: .12em; opacity: .65; }
+.sl-nums b { font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.sl-nums .take b { color: #ffd54a; }
+.sl-nav { margin-left: auto; display: flex; gap: 6px; }
+.sl-nav button { width: 40px; height: 40px; border-radius: 50%; border: 1px solid rgba(255,255,255,.25); background: none; color: inherit; font-size: 1rem; }
+.sl-nav button:disabled { opacity: .3; }
+.sl-text { font-size: 1.15rem; line-height: 1.45; white-space: pre-wrap; }
+.sl-seq { font-size: .85rem; opacity: .7; white-space: pre-wrap; }
+.sl-foot { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sl-foot .vid { background: rgba(255,255,255,.12); color: inherit; }
+.takechip { border: none; border-radius: 14px; padding: 4px 10px; background: rgba(255,255,255,.12); color: inherit; font-size: .85rem; }
+.clap { border: none; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-size: 1.3rem; font-weight: 800; padding: 16px; }
+.clap:active, .av:active { transform: scale(.97); }
+.com { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 1rem; width: 100%; }
+.avis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.av { --av: var(--muted); border: 2px solid var(--av); background: var(--panel); border-radius: 14px; display: grid; justify-items: center; padding: 8px 2px; min-height: 64px; }
+.av span { font-size: 1.5rem; line-height: 1.1; }
+.av b { font-size: .8rem; color: var(--av); }
+.hint { color: var(--muted); font-size: .8rem; text-align: center; margin: -4px 0 0; }
+.k-master { --av: var(--av-master); } .k-ok { --av: var(--av-ok); } .k-moyen { --av: var(--av-moyen); }
+.k-bof { --av: var(--av-bof); } .k-ko { --av: var(--av-ko); } .k-verif { --av: var(--av-verif); }
+.day-side { background: var(--panel); border-radius: 16px; padding: 12px; display: grid; gap: 8px; }
+.day-side h2 { margin: 0; font-size: 1rem; display: flex; justify-content: space-between; gap: 8px; }
+.day-side h2 small { color: var(--muted); font-weight: 500; }
+.strip { display: flex; flex-wrap: wrap; gap: 6px; }
+.pchip { border: 2px solid var(--line); background: var(--panel-2); border-radius: 12px; padding: 6px 10px; font-weight: 700; font-size: .9rem; display: inline-flex; align-items: center; gap: 6px; }
+.pchip.done { border-color: var(--av-master); }
+.pchip.cur { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.pchip.next { border-style: dashed; border-color: var(--accent); }
+.pchip.impro { border-color: var(--orange); }
+.pchip.add { color: var(--orange); border-color: var(--orange); background: none; }
+.linkbtn { border: none; background: none; color: var(--accent); font-weight: 600; padding: 4px 0; text-align: left; }
+.sc-list { display: grid; gap: 4px; }
+.sc-seq { font-weight: 800; margin-top: 10px; }
+.sc-plan { display: grid; grid-template-columns: 44px 1fr; gap: 6px; padding: 6px 8px; border-radius: 8px; }
+.sc-plan.cur { background: var(--accent); color: var(--on-accent); }
+
+/* Glisser, fenêtres */
+.cs-ghost { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -100%); background: var(--panel); border: 2px solid var(--accent); border-radius: 20px; padding: 6px 12px; font-weight: 700; box-shadow: var(--shadow); white-space: nowrap; }
+.cs-line { position: fixed; z-index: 55; pointer-events: none; height: 4px; background: var(--accent); border-radius: 2px; }
+.cs-line span { position: absolute; left: 10px; top: -14px; background: var(--accent); color: var(--on-accent); font-size: .8rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+.cs-into { outline: 3px dashed var(--accent) !important; outline-offset: 2px; }
+.cs-flash { animation: fl 1.5s ease-out; }
+@keyframes fl { 0%, 35% { box-shadow: 0 0 0 3px var(--accent); } }
+@media (prefers-reduced-motion: reduce) { .cs-flash { animation: none; } }
+.cs-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(140px + env(safe-area-inset-bottom, 0px)); z-index: 70; background: var(--text); color: var(--bg); border-radius: 12px; padding: 12px 14px; display: flex; gap: 14px; align-items: center; max-width: min(92vw, 480px); box-shadow: var(--shadow); }
+.cs-toast button { border: none; background: none; color: var(--accent); font-weight: 800; text-transform: uppercase; }
+.cs-modal-back { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.cs-modal { background: var(--panel); width: min(600px, 100%); border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; max-height: 88vh; overflow-y: auto; }
+.cs-modal h3 { margin: 0; font-size: 1.15rem; }
+.cs-modal p { margin: 0; color: var(--muted); line-height: 1.45; }
+.cs-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.cs-btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; padding: 11px 16px; font-weight: 700; }
+.cs-btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.cs-btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
+.cs-btn.impro { background: var(--orange); color: #000; border-color: var(--orange); }
+.cs-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); font-size: 1.1rem; }
+.cs-error { color: var(--red) !important; font-weight: 600; }
+.cs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-chip { border: 1px solid var(--line); background: var(--panel-2); border-radius: 16px; padding: 7px 12px; font-weight: 700; }
+.cs-chip.on { background: var(--orange); border-color: var(--orange); color: #000; }
+.cs-video { aspect-ratio: 16 / 9; max-width: 100%; background: #000; color: #fff; border-radius: 10px; display: grid; place-items: center; font-size: 2.4rem; }
+.take { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 8px; background: var(--panel-2); border-left: 4px solid var(--av); }
+.take div { flex: 1; min-width: 0; }
+.take small { display: block; color: var(--muted); }
+.take button { border: none; background: none; color: var(--red); }
+.back { display: inline-block; margin-top: 30px; font-size: .8rem; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page" id="page"></div>
+<div class="adders" id="adders"></div>
+<nav class="tabs" aria-label="Écrans">
+  <button type="button" data-tab="decoupage"><span>📖</span>Découpage</button>
+  <button type="button" data-tab="travail"><span>🗓️</span>Plan de travail</button>
+  <button type="button" data-tab="plateau"><span>🎬</span>Plateau</button>
+</nav>
+
+<script src="core.js"></script>
+<script>
+const { el } = CS;
+const $ = (id) => document.getElementById(id);
+let tab = "decoupage";
+let dayFilter = "all";        // "all" ou index du séparateur de la journée affichée
+let searchOn = false, query = "";
+
+function render() {
+  // Les outils d'un plan n'apparaissent que tant que son texte a le focus : les toucher ne doit pas le lui retirer
+document.addEventListener("pointerdown", (e) => { if (e.target.closest && e.target.closest(".tool")) e.preventDefault(); }, true);
+document.querySelectorAll("[data-tab]").forEach((b) => b.classList.toggle("on", b.dataset.tab === tab));
+  $("page").classList.toggle("wide", tab === "plateau");
+  const body = tab === "decoupage" ? screenDecoupage() : tab === "travail" ? screenTravail() : screenPlateau();
+  $("page").replaceChildren(...body.filter(Boolean), el("a", { class: "back", href: "index.html", text: "← Retour aux propositions" }));
+  renderAdders();
+}
+const head = (title, hint, extra) => el("div", { class: "head" }, el("div", { class: "grow" }, el("h1", { text: title }), el("p", { text: hint })), extra);
+
+// ---------- 1. DÉCOUPAGE ----------
+function screenDecoupage() {
+  const list = el("div");
+  CS.seqs().forEach((s) => {
+    const plans = CS.plansOf(s.id);
+    list.append(el("section", { class: "seq", "data-seq": s.id, style: "--c:" + CS.seqColor(s.id) },
+      el("div", { class: "seq-head" },
+        el("div", { class: "label" }, "Séquence", el("b", { text: String(s.id) })),
+        CS.textField(s, "info", "Lieu, moment, personnages…"),
+        CS.readOnly ? null : el("div", { class: "tools" },
+          el("button", { class: "tool", type: "button", text: "N° " + s.id + " ✎", onclick: () => CS.askNumber("Numéro de la séquence", s.id, "Les numéros peuvent sauter (1, 2, 5…).", async (v) => {
+            const r = await CS.setSeqNum(s.id, v); if (r === "") { CS.afterRender({ scroll: `.seq[data-seq="${parseInt(v, 10)}"]`, flash: `.seq[data-seq="${parseInt(v, 10)}"] .seq-head` }); CS.render(); } return r; }) }),
+          el("button", { class: "tool danger", type: "button", text: "Supprimer la séquence", onclick: () => CS.deleteSeq(s.id) }))),
+      el("div", { class: "plans" }, plans.length ? plans.map((p) => planCard(p)) : el("div", { class: "empty", text: "Pas encore de plan." }))));
+  });
+  if (!CS.seqs().length) list.append(el("div", { class: "empty", text: "Pas encore de séquence : appuyez sur « + Séquence »." }));
+  return [head("Découpage", "Les séquences et leurs plans, dans l'ordre du film. Touchez un texte pour l'écrire."), list];
+}
+function planCard(p) {
+  const takes = CS.takesOf(p.seqId, p.id);
+  return el("div", { class: "plan", "data-seq": p.seqId, "data-plan": p.id, style: "--c:" + CS.seqColor(p.seqId) },
+    el("div", { class: "label" }, "Plan", el("b", { text: String(p.id) }), p.impro ? el("span", { style: "color:var(--orange)", text: "impro" }) : null,
+      takes.length ? el("span", { class: "dots" }, takes.map((t) => el("i", { style: "--av:var(--av-" + CS.avisKey(t.avis) + ")" }))) : null),
+    CS.textField(p, "info", "Décrire le plan…"),
+    p.video ? el("button", { class: "vid", type: "button", onclick: () => CS.previewVideo(p) }, el("i", { text: "▶" }), el("span", { text: p.video.name })) : null,
+    CS.readOnly ? null : el("div", { class: "tools" },
+      el("button", { class: "tool", type: "button", text: "N° " + p.id + " ✎", onclick: () => CS.askNumber("Numéro du plan " + CS.key(p), p.id, "Le plan prend ce rang, les autres suivent.", async (v) => CS.setPlanNum(p.seqId, p.id, v)) }),
+      p.video ? null : el("button", { class: "tool", type: "button", text: "🎞️ Vidéo de référence", onclick: () => CS.pickVideo(p) }),
+      el("button", { class: "tool danger", type: "button", text: "Supprimer", onclick: () => CS.deletePlan(p.seqId, p.id) })));
+}
+
+// ---------- 2. PLAN DE TRAVAIL ----------
+function screenTravail() {
+  const days = CS.days();
+  if (dayFilter !== "all" && !days.some((g) => g.index === dayFilter)) dayFilter = "all";
+  const q = CS.parseQuery(query);
+  const chips = el("div", { class: "chips", id: "chips" },
+    el("button", { class: "chip" + (dayFilter === "all" ? " on" : ""), type: "button", "data-chip": "all", onclick: () => { dayFilter = "all"; render(); } }, "Tout", el("small", { text: String(CS.state.plans.length) })),
+    days.map((g) => el("button", { class: "chip" + (dayFilter === g.index ? " on" : "") + (g.sep ? "" : " warn"), type: "button", "data-chip": g.index, onclick: () => { dayFilter = g.index; render(); } },
+      g.sep ? (g.sep.text || "Journée sans nom") : "À placer", el("small", { text: String(g.items.length) }))));
+  const shown = dayFilter === "all" ? days : days.filter((g) => g.index === dayFilter);
+  const list = el("div");
+  let n = 0, total = 0;
+  shown.forEach((g) => {
+    const vis = g.items.filter(({ p }) => CS.matches(p, q));
+    total += g.items.length; n += vis.length;
+    if (q && !vis.length) return;
+    if (dayFilter === "all") list.append(el("div", { class: "daytitle", text: (g.sep ? g.sep.text || "Journée sans nom" : "À placer") + " · ≈ " + CS.fmtMin(CS.dayMinutes(g)) }));
+    else if (g.sep) list.append(el("div", { class: "dayhead" },
+      el("input", { class: "cs-edit", type: "text", value: g.sep.text || "", placeholder: "Nom de la journée", "aria-label": "Nom de la journée", readonly: CS.readOnly, oninput: (e) => { g.sep.text = e.target.value; CS.saveSoon(); }, onchange: () => { CS.saveNow(); render(); } }),
+      CS.readOnly ? null : el("button", { class: "tool danger", type: "button", text: "Supprimer", title: "Ses plans rejoignent la journée précédente", onclick: () => { CS.deleteDay(g.index); dayFilter = "all"; } }),
+      el("small", { text: g.items.length + " plans · ≈ " + CS.fmtMin(CS.dayMinutes(g)) + " · glissez un plan sur une pastille du haut pour le changer de journée" })));
+    list.append(el("div", { class: "rows" }, vis.length ? vis.map(({ index, p }) => travailRow(p, index)) : el("div", { class: "empty", text: "Aucun plan." })));
+  });
+  const search = searchOn ? el("div", { class: "search" }, el("input", { id: "q", type: "search", value: query, placeholder: "Mot, personnage, décor… ou 5 / 5.3", "aria-label": "Rechercher", oninput: (e) => { query = e.target.value; render(); const i = $("q"); i.focus(); i.setSelectionRange(i.value.length, i.value.length); } }),
+    el("small", { text: q ? n + " / " + total : "" })) : null;
+  return [head("Plan de travail", "L'ordre de tournage, journée par journée.",
+    el("button", { class: "ic" + (searchOn ? " on" : ""), type: "button", "aria-label": "Rechercher", text: "🔍", onclick: () => { searchOn = !searchOn; if (!searchOn) query = ""; render(); if (searchOn) $("q").focus(); } })),
+    search, chips, list];
+}
+function travailRow(p, index) {
+  return el("div", { class: "row" + (p.impro ? " impro" : ""), "data-index": index, style: "--c:" + CS.seqColor(p.seqId) },
+    CS.readOnly ? el("span") : el("button", { class: "handle", type: "button", "aria-label": "Déplacer le plan " + CS.key(p), text: "⠿", onpointerdown: (e) => CS.beginDrag(e, moveOpt(index, CS.key(p))) }),
+    el("span", { class: "code", text: CS.key(p) }),
+    el("div", { class: "rtext" }, p.info || "…", el("small", { text: CS.seqTitle(p.seqId) })),
+    el("input", { class: "temps", type: "text", value: p.temps || "", placeholder: "⏱ temps", "aria-label": "Temps du plan " + CS.key(p), readonly: CS.readOnly, oninput: (e) => { p.temps = e.target.value; CS.saveSoon(); }, onchange: () => { CS.saveNow(); render(); } }));
+}
+
+// ---------- 3. PLATEAU ----------
+function ensureActive() {
+  if (CS.activePlan()) return;
+  const last = CS.lastTake(), first = CS.state.tournageList.find((i) => i.type === "plan");
+  const k = last ? { seqId: last.seqId, planId: last.planId } : first ? { seqId: first.seqId, planId: first.planId } : null;
+  CS.active = k;
+}
+function orderPlans() { return CS.state.tournageList.filter((i) => i.type === "plan").map((i) => CS.plan(i.seqId, i.planId)).filter(Boolean); }
+function screenPlateau() {
+  ensureActive();
+  const p = CS.activePlan();
+  if (!p) return [head("Plateau", "Créez d'abord des plans dans le découpage.")];
+  const all = orderPlans(), i = all.indexOf(p), n = CS.nextTake(p.seqId, p.id), takes = CS.takesOf(p.seqId, p.id);
+  const go = (k) => { const q = all[k]; if (q) { CS.active = { seqId: q.seqId, planId: q.id }; render(); } };
+  const com = el("input", { class: "com", id: "com", type: "text", placeholder: "Commentaire / raccord (facultatif)", autocomplete: "off", "aria-label": "Commentaire" });
+  const day = CS.dayOf(p), next = CS.nextToShoot();
+  const slate = el("div", { class: "slate" + (p.impro ? " impro" : "") }, el("div", { class: "stripes" }),
+    el("div", { class: "sl-body" },
+      el("div", { class: "sl-nums" },
+        el("div", {}, el("small", { text: "SÉQ" }), el("b", { text: String(p.seqId) })),
+        el("div", {}, el("small", { text: "PLAN" }), el("b", { text: String(p.id) })),
+        el("div", { class: "take" }, el("small", { text: "PRISE" }), el("b", { text: String(n) })),
+        el("div", { class: "sl-nav" },
+          el("button", { type: "button", "aria-label": "Plan précédent", text: "◀", disabled: i <= 0, onclick: () => go(i - 1) }),
+          el("button", { type: "button", "aria-label": "Plan suivant", text: "▶", disabled: i >= all.length - 1, onclick: () => go(i + 1) }))),
+      el("div", { class: "sl-text", text: p.info || "Plan sans description" }),
+      CS.seq(p.seqId) && CS.seq(p.seqId).info ? el("div", { class: "sl-seq", text: CS.seq(p.seqId).info }) : null,
+      el("div", { class: "sl-foot" },
+        p.video ? el("button", { class: "vid", type: "button", onclick: () => CS.previewVideo(p) }, el("i", { text: "▶" }), el("span", { text: "Vidéo de référence" })) : null,
+        takes.length ? el("button", { class: "takechip", type: "button", onclick: () => takesSheet(p) }, takes.length + " prise" + (takes.length > 1 ? "s" : "") + " · " + takes.map((t) => CS.avisShort(t.avis).e).join(" ")) : null)));
+  const left = el("div", { class: "stage-main", style: "display:grid;gap:12px" },
+    slate,
+    el("button", { class: "clap", type: "button", text: "🎬 Clap · prise " + n, onclick: CS.clap }),
+    com,
+    el("div", { class: "avis" }, CS.AVIS_BUTTONS.map((a) => el("button", { class: "av k-" + a.k, type: "button", disabled: CS.readOnly, onclick: () => CS.saveTake(a.label, com.value) }, el("span", { text: a.e }), el("b", { text: a.s })))),
+    el("p", { class: "hint", text: "Toucher l'avis enregistre la prise " + n + "." }));
+  const side = el("div", { class: "day-side" },
+    el("h2", {}, day && day.sep ? (day.sep.text || "Journée") : "Journée", el("small", { text: day ? day.items.filter(({ p: x }) => CS.takesOf(x.seqId, x.id).length).length + "/" + day.items.length + " tournés" : "" })),
+    el("div", { class: "strip" },
+      (day ? day.items : []).map(({ p: x }) => el("button", { type: "button", onclick: () => { CS.active = { seqId: x.seqId, planId: x.id }; render(); },
+        class: "pchip" + (CS.isActive(x) ? " cur" : CS.takesOf(x.seqId, x.id).length ? " done" : x === next ? " next" : "") + (x.impro ? " impro" : ""),
+        title: x.info }, (CS.takesOf(x.seqId, x.id).length && !CS.isActive(x) ? "✓ " : "") + CS.key(x))),
+      CS.readOnly ? null : el("button", { class: "pchip add", type: "button", text: "⚡ Impro", onclick: () => CS.improDialog(p.seqId, null, () => render()) })),
+    next && !CS.isActive(next) ? el("button", { class: "linkbtn", type: "button", text: "▶ À suivre : " + CS.key(next) + " · " + (next.info || "").slice(0, 40), onclick: () => { CS.active = { seqId: next.seqId, planId: next.id }; render(); } }) : null,
+    el("button", { class: "linkbtn", type: "button", text: "📖 Où en est-on dans l'histoire ?", onclick: scenarioSheet }),
+    el("button", { class: "linkbtn", type: "button", text: "🗓️ Autres journées", onclick: () => { tab = "travail"; dayFilter = "all"; render(); } }));
+  return [el("div", { class: "stage" }, left, side)];
+}
+function takesSheet(p) {
+  CS.modal("Prises du plan " + CS.key(p), (close) => [
+    el("p", { text: "Supprimer une prise ne renumérote pas les autres (leur clap a déjà été joué)." }),
+    el("div", { style: "display:grid;gap:6px" }, CS.takesOf(p.seqId, p.id).map((t) => el("div", { class: "take", style: "--av:var(--av-" + CS.avisKey(t.avis) + ")" },
+      el("div", {}, el("b", { text: "Prise " + t.prise + " · " + t.avis }), t.com ? el("small", { text: t.com }) : null),
+      CS.readOnly ? null : el("button", { type: "button", text: "✕", title: "Supprimer", onclick: () => { CS.deleteTake(t.uid); close(); if (CS.takesOf(p.seqId, p.id).length) takesSheet(p); } }))))]);
+}
+function scenarioSheet() {
+  const a = CS.activePlan();
+  CS.modal("Le scénario", (close) => [el("div", { class: "sc-list" }, CS.seqs().map((s) => [
+    el("div", { class: "sc-seq", text: "SÉQ " + s.id + " · " + CS.seqTitle(s.id) }),
+    CS.plansOf(s.id).map((p) => el("div", { class: "sc-plan" + (p === a ? " cur" : ""), id: p === a ? "sc-cur" : null }, el("b", { text: CS.key(p) }), el("span", { text: p.info })))]))]);
+  setTimeout(() => { const c = $("sc-cur"); if (c) c.scrollIntoView({ block: "center" }); }, 50);
+}
+
+// ---------- Création : boutons à toucher (à la fin) ou à glisser (à l'endroit voulu) ----------
+function renderAdders() {
+  const box = $("adders");
+  if (CS.readOnly || tab === "plateau") return box.replaceChildren();
+  const B = (label, cls, opt) => el("button", { class: "adder " + cls, type: "button", text: label, title: "Toucher : à la fin · maintenir et glisser : à l'endroit voulu", onpointerdown: (e) => CS.beginDrag(e, opt) });
+  if (tab === "decoupage") box.replaceChildren(B("+ Séquence", "alt", seqOpt()), B("+ Plan", "", planOpt()));
+  else box.replaceChildren(B("+ Journée", "", dayOpt()));
+}
+const bottomInset = () => 130;
+function focusPlan(p) { if (p) { CS.afterRender({ scroll: `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"]`, focus: `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"] textarea` }); CS.render(); } }
+function focusSeq(id) { if (id) { CS.afterRender({ scroll: `.seq[data-seq="${id}"]`, focus: `.seq[data-seq="${id}"] .seq-head textarea` }); CS.render(); } }
+function seqOpt() {
+  return { label: "+ Séquence", bottomInset,
+    onTap: async () => { const s = CS.seqs(); focusSeq(await CS.insertSeq(s.length ? s[s.length - 1].id : 0)); },
+    resolve: (x, y, under) => {
+      const sec = under.closest(".seq");
+      const seqs = CS.seqs();
+      if (sec) {
+        const id = +sec.dataset.seq, h = CS.half(sec, y, 80), i = seqs.findIndex((s) => s.id === id);
+        const afterId = h.before ? (i > 0 ? seqs[i - 1].id : 0) : id;
+        return { ...h, text: "Séquence " + (afterId + 1) + " ici", run: async () => focusSeq(await CS.insertSeq(afterId)) };
+      }
+      return null;
+    } };
+}
+function planOpt() {
+  return { label: "+ Plan", bottomInset,
+    onTap: async () => { const s = CS.seqs().pop(); if (s) focusPlan(await CS.insertPlan(s.id, CS.plansOf(s.id).length)); },
+    resolve: (x, y, under) => {
+      const card = under.closest(".plan");
+      if (card) {
+        const seqId = +card.dataset.seq, id = +card.dataset.plan, h = CS.half(card, y), pos = id - 1 + (h.before ? 0 : 1);
+        return { ...h, text: "Plan " + seqId + "." + (pos + 1) + (pos < CS.plansOf(seqId).length ? " · suivants +1" : ""), run: async () => focusPlan(await CS.insertPlan(seqId, pos)) };
+      }
+      const sec = under.closest(".seq");
+      if (sec) { const seqId = +sec.dataset.seq, n = CS.plansOf(seqId).length, hd = sec.querySelector(".seq-head");
+        return { rect: hd.getBoundingClientRect(), before: false, into: hd, text: "Plan " + seqId + ".1 (en tête)", run: async () => focusPlan(await CS.insertPlan(seqId, 0)) }; }
+      return null;
+    } };
+}
+function dayOpt() {
+  return { label: "+ Journée", bottomInset,
+    onTap: () => { const at = CS.insertDay(CS.state.tournageList.length); dayFilter = at; CS.render(); setTimeout(() => { const i = document.querySelector(".dayhead input"); if (i) i.focus(); }, 60); },
+    resolve: (x, y, under) => {
+      const r = under.closest(".row");
+      if (!r) return null;
+      const h = CS.half(r, y), at = +r.dataset.index + (h.before ? 0 : 1);
+      return { ...h, text: "Nouvelle journée ici", run: () => { CS.insertDay(at); dayFilter = at; CS.render(); } };
+    } };
+}
+function moveOpt(from, label) {
+  return { label, armed: true, bottomInset,
+    topInset: () => ($("chips") ? $("chips").offsetHeight : 0),
+    onStart: () => { const n = document.querySelector(`.row[data-index="${from}"]`); if (n) n.style.opacity = ".35"; },
+    resolve: (x, y, under) => {
+      // Lâcher sur une pastille de journée : le plan va à la fin de cette journée
+      const chip = under.closest("[data-chip]");
+      if (chip && chip.dataset.chip !== "all") {
+        const sep = +chip.dataset.chip, g = CS.days().find((d) => d.index === sep);
+        if (!g) return null;
+        const firstDay = CS.days().find((d) => d.sep);
+        const at = g.sep ? CS.dayEnd(sep) : (firstDay ? firstDay.index : CS.state.tournageList.length);
+        return { rect: chip.getBoundingClientRect(), before: false, into: chip, text: "→ " + (g.sep ? g.sep.text || "journée" : "À placer"), run: () => CS.moveItem(from, at) };
+      }
+      const r = under.closest(".row");
+      if (!r) return null;
+      const h = CS.half(r, y), at = +r.dataset.index + (h.before ? 0 : 1);
+      if (at === from || at === from + 1) return null;
+      return { ...h, text: "Déplacer ici", run: () => { const to = CS.moveItem(from, at); CS.afterRender({ flash: `.row[data-index="${to}"]` }); CS.render(); } };
+    } };
+}
+
+// Les outils d'un plan n'apparaissent que tant que son texte a le focus : les toucher ne doit pas le lui retirer
+document.addEventListener("pointerdown", (e) => { if (e.target.closest && e.target.closest(".tool")) e.preventDefault(); }, true);
+document.querySelectorAll("[data-tab]").forEach((b) => b.addEventListener("click", () => { tab = b.dataset.tab; window.scrollTo(0, 0); render(); }));
+CS.keyboard(() => (tab === "travail" && $("chips") ? $("chips").offsetHeight : 0));
+CS.boot(render);
+</script>
+</body>
+</html>
