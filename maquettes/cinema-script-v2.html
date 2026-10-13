@@ -114,7 +114,7 @@
     .acc-plan.impro { border-left-color: var(--orange); }
     .acc-plan.active { outline: 2px solid var(--accent); background: #1f2d3d; }
     .acc-top { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-    .acc-title { display: flex; align-items: center; gap: 10px; cursor: pointer; flex-grow: 1; user-select: none; background: none; border: none; color: inherit; padding: 0; text-align: left; min-width: 0; }
+    .acc-title { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; cursor: pointer; flex-grow: 1; user-select: none; background: none; border: none; color: inherit; padding: 0; text-align: left; min-width: 0; font: inherit; }
     .acc-toggle { display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-grow: 1; align-self: stretch; background: none; border: none; color: inherit; cursor: pointer; padding: 0; }
     .header-label { font-weight: bold; font-size: 1.2rem; display: flex; align-items: center; gap: 8px; }
     .seq-num { background: none; border: none; color: inherit; font-weight: bold; font-size: 1.2rem; padding: 2px 4px; margin-left: -4px; border-radius: 5px; cursor: text; display: flex; align-items: baseline; gap: 6px; }
@@ -123,15 +123,18 @@
     .seq-num:hover { background: rgba(255,255,255,.1); }
     .seq-num-edit { display: flex; align-items: center; gap: 6px; font-weight: bold; font-size: 1.2rem; }
     .seq-num-edit input { width: 5.5rem; padding: 6px 8px; font-size: 1.1rem; font-weight: bold; background: rgba(0,0,0,.35); color: white; border-color: var(--accent); }
-    .acc-plan .seq-num, .acc-plan .seq-num-edit { font-size: 1.1rem; }
     .plan-impro-tag { font-size: .8rem; color: var(--orange); font-weight: bold; }
     .seq-error { background: rgba(208,2,27,.25); border: 1px solid var(--red); color: white; border-radius: 6px; padding: 6px 10px; font-size: .9rem; }
     .seq-meta { font-size: .85rem; opacity: .7; white-space: nowrap; }
     .chevron { font-size: 0.9rem; opacity: 0.7; }
-    .header-input { background: rgba(0,0,0,0.25); border: 1px solid rgba(255,255,255,0.2); color: white; padding: 10px; font-size: 1rem; border-radius: 5px; width: 100%; resize: none; overflow: hidden; line-height: 1.4; font-family: inherit; margin: 0; }
+    .header-input { background: rgba(0,0,0,0.16); border: 1px solid transparent; color: white; padding: 8px 10px; font-size: 1.08rem; border-radius: 6px; width: 100%; resize: none; overflow: hidden; line-height: 1.5; font-family: inherit; margin: 0; }
+    .header-input:hover { border-color: rgba(255,255,255,0.15); }
     .header-input:focus { outline: 1px solid var(--accent); background: rgba(0,0,0,0.4); }
+    .acc-seq > .header-input { font-weight: 600; font-size: 1.12rem; }
+    .acc-plan .seq-num, .acc-plan .seq-num-edit, .acc-plan .header-label { font-size: .95rem; letter-spacing: .03em; opacity: .9; }
     .header-input[readonly] { border-color: transparent; background: transparent; }
-    .plan-info-ro { opacity: .85; font-size: .95rem; line-height: 1.4; white-space: pre-wrap; }
+    .plan-info-ro { font-size: 1.08rem; line-height: 1.5; white-space: pre-wrap; }
+    .acc-seq > .plan-info-ro { font-weight: 600; }
     .inline-actions { display: flex; gap: 4px; align-items: center; flex: none; }
     .btn-icon { background: none; border: none; font-size: 1.2rem; cursor: pointer; padding: 5px; opacity: 0.6; border-radius: 5px; color: inherit; }
     .btn-icon:hover { opacity: 1; background: rgba(255,255,255,0.1); }
@@ -154,34 +157,37 @@
     .empty { color: var(--text-muted); padding: 10px; font-style: italic; }
     .btn-delete { background: var(--red); color: white; border: none; padding: 7px 11px; border-radius: 5px; cursor: pointer; flex: none; }
 
-    /* Plan de travail / ordre de tournage */
-    .tournage-list { display: flex; flex-direction: column; gap: 8px; }
-    .tournage-item { background: #2c3e50; color: white; border-radius: 8px; scroll-margin-top: 240px; }
-    .tournage-item.active { outline: 2px solid var(--accent); background: #1f2d3d; }
-    .tournage-item.impro { box-shadow: inset 4px 0 0 var(--orange); }
-    .tournage-item.done:not(.active) { opacity: .7; }
-    .tournage-row { display: flex; align-items: center; gap: 10px; padding: 10px 15px; min-height: 52px; }
-    .tournage-sep { background: #5a3c20; border-left: 4px solid var(--orange); }
-    .t-open { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; background: none; border: none; color: inherit; padding: 0; cursor: pointer; text-align: left; font-size: 1rem; }
-    .t-code { font-weight: bold; color: var(--blue); flex: none; }
-    .tournage-item.impro .t-code { color: var(--orange); }
-    .tournage-item.active .t-code { color: var(--accent); }
-    .t-info { flex: 1; min-width: 0; opacity: 0.8; font-size: 0.9rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
     .t-temps { width: 90px; flex: none; }
     .t-temps-ro { font-size: .85rem; opacity: .7; flex: none; }
-    .sep-label { font-weight: bold; color: var(--orange); flex: none; }
-    .sep-total { font-size: .8rem; color: #ffd9a8; white-space: nowrap; flex: none; }
     .take-dots { display: inline-flex; gap: 3px; flex: none; }
     .take-dots i { width: 9px; height: 9px; border-radius: 50%; background: var(--av, var(--text-muted)); display: block; }
-    .last-marker { font-size: .78rem; font-weight: bold; color: var(--accent); padding: 8px 15px 0; }
-    .shoot-takes { padding: 0 15px 12px; display: grid; gap: 8px; }
-    .tournage-item.active .t-info { white-space: normal; overflow: visible; opacity: 1; font-size: 1rem; line-height: 1.4; }
     .shoot-seq { font-size: .85rem; opacity: .7; white-space: pre-wrap; border-left: 2px solid var(--blue); padding-left: 8px; }
-    .shoot-takes .take-list { margin-left: 0; }
-    @media (max-width: 560px) { .t-temps { width: 70px; } .tournage-row { padding: 8px 10px; gap: 8px; } }
 
+    /* Ordre de tournage : journées repliables (comme les séquences) contenant les plans */
+    .order-list { display: flex; flex-direction: column; gap: 12px; }
+    .acc-day { background: #5a3c20; border-left-color: var(--orange); }
+    .acc-day .acc-top { align-items: center; }
+    .day-input { font-weight: bold; font-size: 1.1rem; flex: 1; min-width: 0; }
+    .day-title { flex: 1; min-width: 0; background: none; border: none; color: inherit; font: inherit; font-weight: bold; font-size: 1.12rem; text-align: left; cursor: pointer; padding: 0; }
+    .acc-day .acc-toggle { flex-grow: 0; padding: 0 4px; }
+    .day-meta { font-size: .85rem; color: #ffd9a8; }
+    .day-content { display: flex; flex-direction: column; gap: 8px; margin: 8px 0 4px 15px; }
+    .day-orphan { font-weight: bold; color: var(--text-muted); padding: 2px 0; }
+    .order-plan { border-left-color: var(--seq-color); scroll-margin-top: 250px; }
+    .order-plan.impro { border-left-color: var(--seq-color); box-shadow: inset 0 -3px 0 var(--orange); }
+    .order-plan.done { opacity: .72; }
+    .order-plan .acc-top { align-items: flex-start; }
+    .o-code { display: flex; gap: 8px; align-items: baseline; font-weight: bold; font-size: .95rem; letter-spacing: .03em; }
+    .o-seq { color: var(--seq-color); }
+    .o-where { flex-basis: 100%; font-size: .8rem; opacity: .65; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .plan-text { display: block; width: 100%; background: none; border: none; color: inherit; text-align: left; font: inherit; font-size: 1.08rem; line-height: 1.5; padding: 0; cursor: pointer; white-space: pre-wrap; }
+    .o-marker { font-size: .8rem; font-weight: bold; color: var(--accent); }
+    .o-marker.next { color: var(--green); }
+    .o-detail { display: grid; gap: 8px; }
+    .o-detail .take-list { margin-left: 0; }
+    .order-plan .t-temps { width: 84px; padding: 6px 8px; font-size: .95rem; }
+    .moving { opacity: .35; }
     .drag-handle { cursor: grab; font-size: 1.6rem; padding: 4px 4px 4px 0; color: var(--text-muted); touch-action: none; user-select: none; flex: none; background: none; border: none; }
-    .tournage-item.moving { opacity: .35; }
 
     /* Boutons flottants : maintenir puis glisser dans la liste pour créer à l'endroit voulu */
     .dock { position: fixed; right: 16px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); display: flex; gap: 14px; z-index: 40; }
@@ -244,10 +250,10 @@
 CINEMA SCRIPT (version One App) — MAQUETTE v2 (phase de design).
 Deux modes :
 - PRÉPARATION : « Découpage » (séquences > plans, toujours en ordre croissant, trous permis : 1, 2, 5, 6…)
-  et « Plan de travail » (tous les plans dans l'ordre de tournage + séparateurs, recherche).
+  et « Plan de travail » (l'ordre de tournage en journées repliables, recherche).
   Création par les boutons flottants : maintenir, glisser dans la liste, lâcher à l'endroit voulu.
 - TOURNAGE : tableau de bord collé en haut (clap, commentaire, avis = enregistrer la prise),
-  liste dans l'ordre de tournage (placée sur la dernière prise) ou dans l'ordre du scénario, plan impro.
+  ordre de tournage (journée en cours ouverte, placée sur la dernière prise) ou ordre du scénario, plan impro.
 
 Structure de state (CONTRAT avec l'extension Premiere : ne pas renommer ces champs) :
 {
@@ -258,8 +264,11 @@ Structure de state (CONTRAT avec l'extension Premiere : ne pas renommer ces cham
   tournageList: [ { type: "plan", seqId, planId } | { type: "sep", text: "Lundi matin" } ]
 }
 - NOUVEAU : plans[].video = vidéo de référence choisie dans Google Drive (Picker), ignorée par l'extension.
-- Numérotation à l'insertion : nouveau numéro = numéro précédent + 1 ; s'il est déjà pris, seuls les numéros
-  qui se suivent derrière sont décalés de 1 (un trou arrête le décalage).
+- Numérotation (phase de préparation) : les plans d'une séquence sont toujours numérotés 1, 2, 3… (insérer,
+  supprimer ou changer un numéro décale les autres). Les séquences peuvent avoir des trous (préparer la 10
+  sans les autres) : une séquence insérée prend précédente + 1 et ne décale que les numéros qui se suivent.
+- Pas de confirmation à la suppression : One App permet de revenir en arrière. On prévient seulement si des
+  prises déjà tournées changeraient de numéro (leur clap garde l'ancien).
 - Les numéros de prise ne sont JAMAIS renumérotés : prise suivante = max + 1.
 - La classe DigitalClapper est une copie exacte de l'original : ne pas la modifier.
 -->
@@ -286,8 +295,8 @@ Structure de state (CONTRAT avec l'extension Premiere : ne pas renommer ces cham
         </div>
 
         <div class="action-row" id="pdfRow">
-            <button class="btn-action btn-pdf-decoupage" type="button" id="btnPdfDecoupage">📄 PDF (Découpage)</button>
-            <button class="btn-action btn-pdf" type="button" id="btnPdfTournage">📄 PDF (Plan de travail)</button>
+            <button class="btn-action btn-pdf" type="button" id="btnPdfDecoupage">📄 PDF (Découpage)</button>
+            <button class="btn-action btn-pdf-decoupage" type="button" id="btnPdfTournage">📄 PDF (Plan de travail)</button>
         </div>
     </div>
 
@@ -597,7 +606,6 @@ function pickVideo(p) {
   // Dans l'app : Google Picker (vidéos de Drive) → { id, name }. Ici : une vidéo fictive.
   p.video = { id: "demo", name: "demo_plan_" + p.seqId + "-" + p.id + ".mp4" };
   commit();
-  toast("Vidéo liée au plan " + p.seqId + "." + p.id + " (ici fictive : le sélecteur Google Drive viendra plus tard)");
 }
 function previewVideo(p) {
   openModal("Plan " + p.seqId + "." + p.id + " · vidéo de référence", (close) => [
@@ -658,8 +666,8 @@ function render() {
   $("searchBar").hidden = !(searchable && searchOpen);
 
   let list;
-  if (mode === "prep") list = prepView === "decoupage" ? renderDecoupage() : renderTravail();
-  else list = shootView === "tournage" ? renderShootList() : renderDecoupage();
+  if (mode === "prep") list = prepView === "decoupage" ? renderDecoupage() : renderOrder();
+  else list = shootView === "tournage" ? renderOrder() : renderDecoupage();
   $("listContainer").replaceChildren(list);
   renderDock();
   updateDashboard();
@@ -718,21 +726,35 @@ function seqNumEditor(seq) {
     () => { editingSeq = null; seqError = ""; render(); });
 }
 
+// Changer le numéro d'un plan = le déplacer à ce rang dans sa séquence (les autres suivent)
 async function applyPlanNum(seqId, oldId, str) {
-  const newId = parseInt(str, 10);
-  if (newId === oldId) { editingPlan = null; planError = ""; return render(); }
+  const plans = plansOfSeq(seqId);
+  let newId = parseInt(str, 10);
   if (isNaN(newId) || newId <= 0) { planError = "Numéro invalide."; focusSel = "#seqNumInput"; return render(); }
-  if (findPlan(seqId, newId)) { planError = "Le plan " + seqId + "." + newId + " existe déjà."; focusSel = "#seqNumInput"; return render(); }
+  newId = Math.min(newId, plans.length);
   editingPlan = null; planError = "";
-  if (!(await confirmRenumber(hasTakes((t) => t.seqId === seqId && t.planId === oldId)))) return render();
-  findPlan(seqId, oldId).id = newId;
-  state.takes.filter((t) => t.seqId === seqId && t.planId === oldId).forEach((t) => { t.planId = newId; });
-  state.tournageList.filter((i) => i.type === "plan" && i.seqId === seqId && i.planId === oldId).forEach((i) => { i.planId = newId; });
-  if (activeSeq === seqId && activePlan === oldId) activePlan = newId;
-  flashSel = `.plan-block[data-seq="${seqId}"][data-plan="${newId}"] .acc-plan`;
-  scrollSel = `.plan-block[data-seq="${seqId}"][data-plan="${newId}"]`;
-  toast("Plan " + seqId + "." + oldId + " → " + seqId + "." + newId + " (rangé à sa place)");
+  if (newId === oldId) return render();
+  const p = findPlan(seqId, oldId);
+  const order = plans.filter((x) => x !== p);
+  order.splice(newId - 1, 0, p);
+  if (!(await renumberPlans(seqId, order))) return render();
+  flashSel = `.plan-block[data-seq="${seqId}"][data-plan="${p.id}"] .acc-plan`;
+  scrollSel = `.plan-block[data-seq="${seqId}"][data-plan="${p.id}"]`;
   commit();
+}
+// Renumérote les plans d'une séquence 1, 2, 3… dans l'ordre donné (prises et plan de travail suivent).
+// Seul cas où l'on prévient : des prises déjà tournées changeraient de numéro (leur clap garde l'ancien).
+async function renumberPlans(seqId, order) {
+  const map = new Map();
+  order.forEach((p, i) => { if (p.id !== i + 1) map.set(p, i + 1); });
+  if (!map.size) return true;
+  const oldIds = new Map([...map].map(([p, n]) => [p.id, n]));
+  if (!(await confirmRenumber(hasTakes((t) => t.seqId === seqId && oldIds.has(t.planId))))) return false;
+  state.takes.forEach((t) => { if (t.seqId === seqId && oldIds.has(t.planId)) t.planId = oldIds.get(t.planId); });
+  state.tournageList.forEach((i) => { if (i.type === "plan" && i.seqId === seqId && oldIds.has(i.planId)) i.planId = oldIds.get(i.planId); });
+  if (activeSeq === seqId && oldIds.has(activePlan)) activePlan = oldIds.get(activePlan);
+  map.forEach((n, p) => { p.id = n; });
+  return true;
 }
 
 async function applySeqNum(oldId, str) {
@@ -750,7 +772,6 @@ async function applySeqNum(oldId, str) {
   if (activeSeq === oldId) activeSeq = newId;
   flashSel = `.seq-block[data-seq="${newId}"] .acc-seq`;
   scrollSel = `.seq-block[data-seq="${newId}"]`;
-  toast("Séquence " + oldId + " → " + newId + " (rangée à sa place)");
   commit();
 }
 
@@ -798,93 +819,127 @@ function renderTakeList(seqId, planId) {
   return list;
 }
 
-// Préparation : plan de travail (ordre de tournage modifiable)
-function renderTravail() {
-  const q = parseQuery(search);
-  const list = el("div", { class: "tournage-list" });
-  // Durée de chaque bloc séparé (somme des temps jusqu'au séparateur suivant)
-  const sepTotals = {};
-  let cur = null;
-  state.tournageList.forEach((i, idx) => {
-    if (i.type === "sep") { cur = idx; sepTotals[idx] = 0; }
-    else if (cur !== null) { const p = findPlan(i.seqId, i.planId); if (p) sepTotals[cur] += minutesOf(p.temps); }
-  });
-  let shown = 0, total = 0;
+// --- ORDRE DE TOURNAGE ---
+// Même lecture que le scénario : des journées (les séparateurs) qui se replient, contenant les plans.
+// Le texte du plan est affiché en entier ; une couleur par séquence aide à s'y retrouver quand elles se mélangent.
+// Préparation : tout est modifiable et déplaçable. Tournage : lecture, la journée en cours est ouverte.
+const prepClosed = new WeakSet(), shootOpen = new WeakSet(), shootClosed = new WeakSet();
+function seqColor(seqId) {
+  const i = seqsSorted().findIndex((s) => s.id === seqId);
+  return "hsl(" + ((Math.max(0, i) * 67 + 205) % 360) + " 65% 62%)";
+}
+function seqTitle(seqId) { const s = state.sequences.find((x) => x.id === seqId); return s && s.info ? s.info.split("\n")[0] : ""; }
+function dayGroups() {
+  const groups = [];
+  let g = null;
   state.tournageList.forEach((item, index) => {
-    let node;
-    if (item.type === "plan") {
-      const p = findPlan(item.seqId, item.planId);
-      if (!p) return;
-      total++;
-      if (!matches(p, q)) return;
-      shown++;
-      const count = takesOf(p.seqId, p.id).length;
-      node = el("div", { class: "tournage-item" + (p.impro ? " impro" : ""), "data-index": index, "data-key": p.seqId + "." + p.id },
-        el("div", { class: "tournage-row" },
-          readOnly ? null : el("button", { class: "drag-handle", type: "button", title: "Glisser pour déplacer", "aria-label": "Déplacer le plan " + p.seqId + "." + p.id, text: "☰",
-            onpointerdown: (e) => beginDrag(e, "move", { from: index, label: "SÉQ " + p.seqId + " - P " + p.id }) }),
-          el("span", { class: "t-open" },
-            el("span", { class: "t-code", text: "SÉQ " + p.seqId + " - P " + p.id }),
-            el("span", { class: "t-info", text: p.info || "..." })),
-          p.video ? el("button", { class: "btn-icon", type: "button", title: "Vidéo de référence", text: "🎞️", onclick: () => previewVideo(p) }) : null,
-          readOnly ? el("span", { class: "t-temps-ro", text: p.temps || "" })
-            : el("input", { class: "header-input t-temps", type: "text", placeholder: "Temps...", value: p.temps || "", "aria-label": "Temps",
-              oninput: (e) => { p.temps = e.target.value; saveSoon(); }, onchange: () => { saveNow(); render(); } }),
-          count ? takeDots(takesOf(p.seqId, p.id)) : null));
-    } else {
-      node = el("div", { class: "tournage-item tournage-sep", "data-index": index },
-        el("div", { class: "tournage-row" },
-          readOnly ? null : el("button", { class: "drag-handle", type: "button", title: "Glisser pour déplacer", "aria-label": "Déplacer le séparateur", text: "☰",
-            onpointerdown: (e) => beginDrag(e, "move", { from: index, label: item.text || "Séparateur" }) }),
-          readOnly ? el("span", { class: "t-info", text: item.text || "" })
-            : el("input", { class: "header-input", type: "text", placeholder: "Ex : Lundi matin, décor…", value: item.text || "", "aria-label": "Texte du séparateur",
-              oninput: (e) => { item.text = e.target.value; saveSoon(); }, onchange: saveNow }),
-          sepTotals[index] ? el("span", { class: "sep-total", text: "≈ " + fmtMin(sepTotals[index]) }) : null,
-          readOnly ? null : el("button", { class: "btn-icon", type: "button", title: "Supprimer le séparateur", text: "❌", onclick: () => deleteGlobalSep(index) })));
-    }
-    list.append(node);
+    if (item.type === "sep") { g = { sep: item, index, items: [] }; groups.push(g); return; }
+    if (!g) { g = { sep: null, index: -1, items: [] }; groups.push(g); }
+    const p = findPlan(item.seqId, item.planId);
+    if (p) g.items.push({ index, p });
   });
-  $("searchCount").textContent = q ? shown + " / " + total + " plans" : total + " plans";
-  if (q && !shown) list.append(el("div", { class: "empty", text: "Aucun plan ne correspond à « " + search + " »." }));
-  return list;
+  return groups;
+}
+function dayEnd(sepIndex) {
+  const n = state.tournageList.findIndex((i, k) => k > sepIndex && i.type === "sep");
+  return n === -1 ? state.tournageList.length : n;
+}
+const dayHasActive = (g) => g.items.some(({ p }) => p.seqId === activeSeq && p.id === activePlan);
+function dayIsOpen(g, q) {
+  if (!g.sep || q) return true;
+  if (mode === "prep") return !prepClosed.has(g.sep);
+  return dayHasActive(g) ? !shootClosed.has(g.sep) : shootOpen.has(g.sep);
+}
+function setDayOpen(g, open) {
+  if (mode === "prep") open ? prepClosed.delete(g.sep) : prepClosed.add(g.sep);
+  else if (dayHasActive(g)) open ? shootClosed.delete(g.sep) : shootClosed.add(g.sep);
+  else open ? shootOpen.add(g.sep) : shootOpen.delete(g.sep);
+}
+// Prochain plan à tourner : le premier sans prise après celui de la dernière prise
+function nextToShoot(last) {
+  const list = state.tournageList;
+  let start = last ? list.findIndex((i) => i.type === "plan" && i.seqId === last.seqId && i.planId === last.planId) + 1 : 0;
+  for (let k = start; k < list.length; k++) {
+    const i = list[k];
+    if (i.type === "plan" && !takesOf(i.seqId, i.planId).length) return i.seqId + "." + i.planId;
+  }
+  return null;
 }
 
-// Tournage : ordre de tournage (lecture), appui = plan actif, placé sur la dernière prise
-function renderShootList() {
+function renderOrder() {
+  const edit = mode === "prep" && !readOnly;
   const q = parseQuery(search);
-  const last = lastTake();
-  const list = el("div", { class: "tournage-list" });
+  const last = mode === "shoot" ? lastTake() : null;
+  const nextKey = mode === "shoot" ? nextToShoot(last) : null;
+  const wrap = el("div", { class: "order-list" });
   let shown = 0, total = 0;
-  state.tournageList.forEach((item, index) => {
-    if (item.type === "sep") {
-      list.append(el("div", { class: "tournage-item tournage-sep", "data-index": index },
-        el("div", { class: "tournage-row" }, el("span", { class: "sep-label", text: "📅" }), el("span", { class: "t-info", text: item.text || "Séparateur" }))));
+  dayGroups().forEach((g) => {
+    const items = g.items.filter(({ p }) => matches(p, q));
+    total += g.items.length; shown += items.length;
+    if (q && !items.length) return;
+    const open = dayIsOpen(g, q);
+    const mins = g.items.reduce((a, { p }) => a + minutesOf(p.temps), 0);
+    const shot = g.items.filter(({ p }) => takesOf(p.seqId, p.id).length).length;
+    const meta = [g.items.length + " plan" + (g.items.length > 1 ? "s" : ""), mins ? "≈ " + fmtMin(mins) : null,
+      mode === "shoot" || shot ? shot + "/" + g.items.length + " tourné" + (shot > 1 ? "s" : "") : null].filter(Boolean).join(" · ");
+    const content = open ? el("div", { class: "day-content" },
+      items.length ? items.map(({ index, p }) => orderPlan(p, index, last, nextKey)) : el("div", { class: "empty", text: "Aucun plan dans cette journée." })) : null;
+    if (!g.sep) {
+      wrap.append(el("div", { class: "day-block", "data-orphan": "1" }, el("div", { class: "day-orphan", text: "Pas encore dans une journée" }), content));
       return;
     }
-    const p = findPlan(item.seqId, item.planId);
-    if (!p) return;
-    total++;
-    if (!matches(p, q)) return;
-    shown++;
-    const takes = takesOf(p.seqId, p.id);
-    const isActive = activeSeq === p.seqId && activePlan === p.id;
-    const isLast = last && last.seqId === p.seqId && last.planId === p.id;
-    list.append(el("div", { class: "tournage-item" + (isActive ? " active" : "") + (p.impro ? " impro" : "") + (takes.length ? " done" : ""), "data-index": index, "data-key": p.seqId + "." + p.id },
-      isLast ? el("div", { class: "last-marker", text: "📍 Dernière prise : n° " + last.prise + " · " + last.avis }) : null,
-      el("div", { class: "tournage-row" },
-        el("button", { class: "t-open", type: "button", title: "Tourner ce plan", onclick: () => activatePlan(p.seqId, p.id) },
-          el("span", { class: "t-code", text: "SÉQ " + p.seqId + " - P " + p.id + (p.impro ? " ⚡" : "") }),
-          el("span", { class: "t-info", text: p.info || "..." })),
-        p.video ? el("button", { class: "btn-icon", type: "button", title: "Vidéo de référence", text: "🎞️", onclick: () => previewVideo(p) }) : null,
-        p.temps ? el("span", { class: "t-temps-ro", text: p.temps }) : null,
-        takes.length ? takeDots(takes) : null),
-      isActive ? el("div", { class: "shoot-takes" },
-        (() => { const sq = state.sequences.find((x) => x.id === p.seqId); return sq && sq.info ? el("div", { class: "shoot-seq", text: "SÉQ " + sq.id + " · " + sq.info }) : null; })(),
-        p.video ? videoChip(p) : null,
-        renderTakeList(p.seqId, p.id)) : null));
+    const toggle = () => { setDayOpen(g, !open); render(); };
+    wrap.append(el("div", { class: "day-block", "data-sep": g.index },
+      el("div", { class: "acc-header acc-day" },
+        el("div", { class: "acc-top" },
+          edit ? el("button", { class: "drag-handle", type: "button", title: "Glisser pour déplacer la journée avec ses plans", "aria-label": "Déplacer la journée", text: "☰",
+            onpointerdown: (e) => beginDrag(e, "moveDay", { from: g.index, label: "📅 " + (g.sep.text || "Journée") }) }) : null,
+          edit ? el("input", { class: "header-input day-input", type: "text", placeholder: "Journée (ex : Lundi matin · décor)", value: g.sep.text || "", "aria-label": "Nom de la journée",
+              oninput: (e) => { g.sep.text = e.target.value; saveSoon(); }, onchange: saveNow })
+            : el("button", { class: "day-title", type: "button", text: "📅 " + (g.sep.text || "Journée"), onclick: toggle }),
+          el("button", { class: "acc-toggle", type: "button", "aria-expanded": String(open), "aria-label": open ? "Replier" : "Déplier", onclick: toggle }, el("span", { class: "chevron", text: open ? "▼" : "▶" })),
+          edit ? el("button", { class: "btn-icon", type: "button", title: "Supprimer la journée (ses plans rejoignent la journée précédente)", text: "❌", onclick: () => deleteGlobalSep(g.index) }) : null),
+        el("div", { class: "day-meta", text: meta })),
+      content));
   });
   $("searchCount").textContent = q ? shown + " / " + total + " plans" : total + " plans";
-  return list;
+  if (q && !shown) wrap.append(el("div", { class: "empty", text: "Aucun plan ne correspond à « " + search + " »." }));
+  if (!total && !q) wrap.append(el("div", { class: "empty", text: "Aucun plan. Créez-les dans le découpage." }));
+  return wrap;
+}
+
+function orderPlan(p, index, last, nextKey) {
+  const edit = mode === "prep" && !readOnly;
+  const shoot = mode === "shoot";
+  const key = p.seqId + "." + p.id;
+  const takes = takesOf(p.seqId, p.id);
+  const isActive = shoot && activeSeq === p.seqId && activePlan === p.id;
+  const isLast = last && last.seqId === p.seqId && last.planId === p.id;
+  const activate = () => activatePlan(p.seqId, p.id);
+  const title = [el("span", { class: "o-code" }, el("span", { class: "o-seq", text: "SÉQ " + p.seqId }), el("span", { text: "PLAN " + p.id }),
+      p.impro ? el("span", { class: "plan-impro-tag", text: "IMPRO" }) : null),
+    el("span", { class: "o-where", text: seqTitle(p.seqId) })];
+  const sq = state.sequences.find((x) => x.id === p.seqId);
+  return el("div", { class: "order-plan acc-header acc-plan" + (p.impro ? " impro" : "") + (isActive ? " active" : "") + (shoot && takes.length && !isActive ? " done" : ""),
+      style: "--seq-color:" + seqColor(p.seqId), "data-index": index, "data-key": key },
+    isLast ? el("div", { class: "o-marker", text: "📍 Dernière prise : n° " + last.prise + " · " + last.avis })
+      : key === nextKey ? el("div", { class: "o-marker next", text: "▶ À suivre" }) : null,
+    el("div", { class: "acc-top" },
+      edit ? el("button", { class: "drag-handle", type: "button", title: "Glisser pour déplacer", "aria-label": "Déplacer le plan " + key, text: "☰",
+        onpointerdown: (e) => beginDrag(e, "move", { from: index, label: "SÉQ " + p.seqId + " · PLAN " + p.id }) }) : null,
+      shoot ? el("button", { class: "acc-title", type: "button", title: "Tourner ce plan", onclick: activate }, title) : el("div", { class: "acc-title" }, title),
+      el("div", { class: "inline-actions" },
+        takes.length ? takeDots(takes) : null,
+        p.video && !isActive ? el("button", { class: "btn-icon", type: "button", title: "Vidéo de référence", text: "🎞️", onclick: () => previewVideo(p) }) : null,
+        edit ? el("input", { class: "header-input t-temps", type: "text", placeholder: "Temps", value: p.temps || "", "aria-label": "Temps du plan " + key,
+            oninput: (e) => { p.temps = e.target.value; saveSoon(); }, onchange: () => { saveNow(); render(); } })
+          : p.temps ? el("span", { class: "t-temps-ro", text: p.temps }) : null)),
+    edit ? textField(p, "info", "Découpage technique (Valeur, action...)", true)
+      : el(shoot ? "button" : "div", { class: "plan-text", type: shoot ? "button" : null, onclick: shoot ? activate : null, text: p.info || "…" }),
+    isActive ? el("div", { class: "o-detail" },
+      sq && sq.info ? el("div", { class: "shoot-seq", text: "SÉQ " + sq.id + " · " + sq.info }) : null,
+      p.video ? videoChip(p) : null,
+      renderTakeList(p.seqId, p.id)) : null);
 }
 
 function updateDashboard() {
@@ -923,7 +978,7 @@ function renderDock() {
     B("seq", "📁", "Séquence", "Nouvelle séquence : maintenir et glisser entre deux séquences"),
     B("plan", "🎬", "Plan", "Nouveau plan : maintenir et glisser entre deux plans ou sur une séquence"));
   else if (ctx === "travail") dock.replaceChildren(
-    B("sep", "📅", "Séparateur", "Nouveau séparateur : maintenir et glisser entre deux plans"));
+    B("sep", "📅", "Journée", "Nouvelle journée : maintenir et glisser entre deux plans"));
   else dock.replaceChildren(
     B("locate", "📍", "Où j'en suis", "Revenir à la dernière prise"),
     B("impro", "⚡", "Impro", "Plan improvisé : glisser à l'endroit où il sera tourné, ou appuyer pour l'ajouter après le plan en cours"));
@@ -937,7 +992,7 @@ function beginDrag(e, kind, extra) {
   if (readOnly || (e.button !== undefined && e.button !== 0)) return;
   e.preventDefault();
   saveNow();
-  drag = { kind, extra, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, hoverSeq: null, hoverTimer: null, raf: null, armed: kind === "move" };
+  drag = { kind, extra, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, hoverSeq: null, hoverTimer: null, raf: null, armed: kind === "move" || kind === "moveDay" };
   try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
   window.addEventListener("pointermove", onDragMove);
   window.addEventListener("pointerup", onDragEnd);
@@ -953,7 +1008,8 @@ function onDragMove(e) {
     drag.ghost = el("div", { class: "drag-ghost", text: drag.extra.label });
     drag.line = el("div", { class: "drop-line" }, el("span"));
     document.body.append(drag.ghost, drag.line);
-    if (drag.kind === "move") { const n = document.querySelector(`.tournage-item[data-index="${drag.extra.from}"]`); if (n) n.classList.add("moving"); }
+    if (drag.kind === "move") { const n = document.querySelector(`.order-plan[data-index="${drag.extra.from}"]`); if (n) n.classList.add("moving"); }
+    if (drag.kind === "moveDay") { const n = document.querySelector(`.day-block[data-sep="${drag.extra.from}"]`); if (n) n.classList.add("moving"); }
     autoScrollLoop();
   }
   e.preventDefault();
@@ -1037,19 +1093,43 @@ function findTarget() {
     }
     return hideLine();
   }
-  // Listes dans l'ordre de tournage : séparateur, déplacement, impro
-  const ti = under.closest(".tournage-item");
-  if (!ti) return hideLine();
-  const index = +ti.dataset.index, r = ti.getBoundingClientRect(), before = y < r.top + r.height / 2;
-  const at = before ? index : index + 1;
-  if (kind === "move") {
-    const from = drag.extra.from;
-    if (at === from || at === from + 1) { drag.target = null; return hideLine(); }
+  // Ordre de tournage : plans et journées
+  const card = under.closest(".order-plan");
+  const day = under.closest(".day-block");
+  if (kind === "moveDay") {
+    if (!day || day.dataset.orphan) return hideLine();
+    const sepIdx = +day.dataset.sep, r = day.getBoundingClientRect(), before = y < r.top + Math.min(r.height / 2, 50);
+    const from = drag.extra.from, at = before ? sepIdx : dayEnd(sepIdx);
+    if (at >= from && at <= dayEnd(from)) { drag.target = null; return hideLine(); }
     drag.target = { at };
-    return showLine(r, before, "Déplacer ici");
+    return showLine(r, before, "Déplacer la journée ici");
   }
-  drag.target = { at };
-  return showLine(r, before, kind === "sep" ? "Séparateur ici" : "Impro tournée ici");
+  const what = kind === "move" ? "Déplacer ici" : kind === "sep" ? "Nouvelle journée ici" : "Impro tournée ici";
+  if (card) {
+    const index = +card.dataset.index, r = card.getBoundingClientRect(), before = y < r.top + r.height / 2;
+    const at = before ? index : index + 1;
+    if (kind === "move" && (at === drag.extra.from || at === drag.extra.from + 1)) { drag.target = null; return hideLine(); }
+    drag.target = { at };
+    return showLine(r, before, what);
+  }
+  if (day) {
+    // Sur l'en-tête d'une journée : en tête de cette journée (fermée : elle s'ouvre si on attend un instant)
+    const orphan = !!day.dataset.orphan, sepIdx = orphan ? -1 : +day.dataset.sep;
+    const g = dayGroups().find((x) => x.index === sepIdx);
+    if (g && g.sep && !dayIsOpen(g, null) && drag.hoverSeq !== "d" + sepIdx) {
+      clearTimeout(drag.hoverTimer);
+      drag.hoverSeq = "d" + sepIdx;
+      drag.hoverTimer = setTimeout(() => { if (drag && drag.hoverSeq === "d" + sepIdx) { setDayOpen(g, true); render(); findTarget(); } }, 650);
+    }
+    const head = day.firstElementChild.getBoundingClientRect();
+    if (kind === "sep") { drag.target = { at: orphan ? 0 : sepIdx }; return showLine(head, true, what); }
+    const at = sepIdx + 1;
+    if (kind === "move" && (at === drag.extra.from || at === drag.extra.from + 1)) { drag.target = null; return hideLine(); }
+    drag.target = { at };
+    if (!orphan) day.firstElementChild.classList.add("drop-into");
+    return showLine(head, false, what + (orphan ? "" : " (début de journée)"));
+  }
+  return hideLine();
 }
 function seqLabel(a, b) { const id = (a || 0) + 1; return "Séquence " + id + (b !== null && id >= b ? " · suivantes +1" : ""); }
 function planLabel(seqId, a, b) { const id = (a || 0) + 1; return "Plan " + seqId + "." + id + (b !== null && id >= b ? " · suivants +1" : ""); }
@@ -1076,6 +1156,7 @@ function onDragEnd(e) {
   else if (d.kind === "plan") insertPlanAt(d.target.seqId, d.target.a, d.target.b);
   else if (d.kind === "sep") insertSepAt(d.target.at);
   else if (d.kind === "move") moveTournageItem(d.extra.from, d.target.at);
+  else if (d.kind === "moveDay") moveDay(d.extra.from, d.target.at);
   else if (d.kind === "impro") improDialog(d.target.seqId, d.target.at);
 }
 // Un simple appui (sans glisser) : création à un endroit par défaut + rappel du geste
@@ -1089,7 +1170,7 @@ function tapAction(kind) {
     insertPlanAt(s.id, plans.length ? plans[plans.length - 1].id : 0, null);
     toast("Plan ajouté en fin de séquence " + s.id + ". Pour choisir l'endroit : maintenir le bouton et glisser.");
   }
-  else if (kind === "sep") { insertSepAt(state.tournageList.length); toast("Séparateur ajouté à la fin. Maintenir et glisser pour le placer entre deux plans."); }
+  else if (kind === "sep") { insertSepAt(state.tournageList.length); toast("Journée ajoutée à la fin. Pour la placer entre deux plans : maintenir le bouton et glisser."); }
   else if (kind === "impro") improDialog(activeSeq, null);
 }
 
@@ -1112,35 +1193,31 @@ async function insertSeqAt(a, b) {
   openSeqs.add(id);
   flashSel = `.seq-block[data-seq="${id}"] .acc-seq`;
   focusSel = `.seq-block[data-seq="${id}"] textarea`;
-  if (run.length) toast("Séquence " + id + " créée · " + run.length + " séquence(s) décalée(s)");
   commit();
 }
 
 async function insertPlanAt(seqId, a, b) {
-  const id = (a || 0) + 1;
-  const run = contiguousFrom(plansOfSeq(seqId).map((p) => p.id), id);
-  if (run.length && !(await confirmRenumber(hasTakes((t) => t.seqId === seqId && run.includes(t.planId))))) return;
-  [...run].reverse().forEach((n) => {
-    findPlan(seqId, n).id = n + 1;
-    state.takes.filter((t) => t.seqId === seqId && t.planId === n).forEach((t) => { t.planId = n + 1; });
-    state.tournageList.forEach((i) => { if (i.type === "plan" && i.seqId === seqId && i.planId === n) i.planId = n + 1; });
-    if (activeSeq === seqId && activePlan === n) activePlan = n + 1;
-  });
-  state.plans.push({ seqId, id, impro: 0, info: "", temps: "", video: null });
+  const plans = plansOfSeq(seqId);
+  const pos = a ? plans.findIndex((p) => p.id === a) + 1 : 0;
+  const prev = pos > 0 ? plans[pos - 1] : null;
+  const np = { seqId, id: 0, impro: 0, info: "", temps: "", video: null };
+  const order = [...plans];
+  order.splice(pos, 0, np);
+  if (!(await renumberPlans(seqId, order))) return;
+  state.plans.push(np);
   // Plan de travail : juste après le plan précédent de la séquence, sinon à la fin
-  const prevIdx = state.tournageList.findIndex((i) => i.type === "plan" && i.seqId === seqId && i.planId === a);
-  state.tournageList.splice(prevIdx === -1 ? state.tournageList.length : prevIdx + 1, 0, { type: "plan", seqId, planId: id });
+  const prevIdx = prev ? state.tournageList.findIndex((i) => i.type === "plan" && i.seqId === seqId && i.planId === prev.id) : -1;
+  state.tournageList.splice(prevIdx === -1 ? state.tournageList.length : prevIdx + 1, 0, { type: "plan", seqId, planId: np.id });
   openSeqs.add(seqId);
-  flashSel = `.plan-block[data-seq="${seqId}"][data-plan="${id}"] .acc-plan`;
-  focusSel = `.plan-block[data-seq="${seqId}"][data-plan="${id}"] textarea`;
-  if (run.length) toast("Plan " + seqId + "." + id + " créé · " + run.length + " plan(s) décalé(s)");
+  flashSel = `.plan-block[data-seq="${seqId}"][data-plan="${np.id}"] .acc-plan`;
+  focusSel = `.plan-block[data-seq="${seqId}"][data-plan="${np.id}"] textarea`;
   commit();
 }
 
 function insertSepAt(at) {
   state.tournageList.splice(at, 0, { type: "sep", text: "" });
-  flashSel = `.tournage-item[data-index="${at}"]`;
-  focusSel = `.tournage-item[data-index="${at}"] input`;
+  flashSel = `.day-block[data-sep="${at}"] .acc-day`;
+  focusSel = `.day-block[data-sep="${at}"] .day-input`;
   commit();
 }
 
@@ -1149,7 +1226,18 @@ function moveTournageItem(from, at) {
   const item = state.tournageList.splice(from, 1)[0];
   const to = at > from ? at - 1 : at;
   state.tournageList.splice(to, 0, item);
-  flashSel = `.tournage-item[data-index="${to}"]`;
+  flashSel = `.order-plan[data-index="${to}"]`;
+  commit();
+}
+// Déplacer une journée avec tous ses plans
+function moveDay(from, at) {
+  if (readOnly) return;
+  const end = dayEnd(from);
+  if (at >= from && at <= end) return;
+  const block = state.tournageList.splice(from, end - from);
+  const to = at > from ? at - block.length : at;
+  state.tournageList.splice(to, 0, ...block);
+  flashSel = `.day-block[data-sep="${to}"] .acc-day`;
   commit();
 }
 
@@ -1186,11 +1274,10 @@ function improDialog(defaultSeq, at) {
       state.tournageList.splice(pos, 0, { type: "plan", seqId, planId: id });
       activeSeq = seqId; activePlan = id;
       openSeqs.add(seqId);
-      scrollSel = shootView === "tournage" ? `.tournage-item[data-key="${seqId}.${id}"]` : `.plan-block[data-seq="${seqId}"][data-plan="${id}"]`;
+      scrollSel = shootView === "tournage" ? `.order-plan[data-key="${seqId}.${id}"]` : `.plan-block[data-seq="${seqId}"][data-plan="${id}"]`;
       flashSel = scrollSel;
       close();
       commit();
-      toast("Plan impro " + seqId + "." + id + " créé, prêt à tourner");
     });
     refresh();
     return [el("p", { text: "Séquence :" }), chips, info, desc,
@@ -1229,32 +1316,35 @@ function scrollToLast() {
   const k = activeSeq !== null ? { seqId: activeSeq, planId: activePlan } : last;
   if (!k) return;
   if (shootView === "scenario") openSeqs.add(k.seqId);
-  scrollSel = shootView === "tournage" ? `.tournage-item[data-key="${k.seqId}.${k.planId}"]` : `.plan-block[data-seq="${k.seqId}"][data-plan="${k.planId}"]`;
+  scrollSel = shootView === "tournage" ? `.order-plan[data-key="${k.seqId}.${k.planId}"]` : `.plan-block[data-seq="${k.seqId}"][data-plan="${k.planId}"]`;
   flashSel = scrollSel;
   render();
 }
 
 // --- SUPPRESSIONS ---
-async function deleteSeq(seqId) {
-  if (readOnly || !(await ask("Supprimer la séquence " + seqId + " ?", "Tous ses plans et leurs prises seront effacés.", "Supprimer", true))) return;
+// Supprimer une séquence : les autres gardent leur numéro (les trous sont permis)
+function deleteSeq(seqId) {
+  if (readOnly) return;
   state.sequences = state.sequences.filter((s) => s.id !== seqId);
   state.plans = state.plans.filter((p) => p.seqId !== seqId);
   state.takes = state.takes.filter((t) => t.seqId !== seqId);
   state.tournageList = state.tournageList.filter((i) => !(i.type === "plan" && i.seqId === seqId));
   commit();
 }
+// Supprimer un plan : les suivants de la séquence remontent d'un numéro
 async function deletePlan(seqId, planId) {
-  if (readOnly || !(await ask("Supprimer le plan " + seqId + "." + planId + " ?", "Ses prises seront effacées. Les autres plans gardent leur numéro.", "Supprimer", true))) return;
+  if (readOnly) return;
   state.plans = state.plans.filter((p) => !(p.seqId === seqId && p.id === planId));
   state.takes = state.takes.filter((t) => !(t.seqId === seqId && t.planId === planId));
   state.tournageList = state.tournageList.filter((i) => !(i.type === "plan" && i.seqId === seqId && i.planId === planId));
+  await renumberPlans(seqId, plansOfSeq(seqId));
   commit();
 }
+// Supprimer une journée : ses plans rejoignent la journée précédente
 function deleteGlobalSep(index) {
   if (readOnly) return;
-  const removed = state.tournageList.splice(index, 1)[0];
+  state.tournageList.splice(index, 1);
   commit();
-  toast("Séparateur supprimé", () => { state.tournageList.splice(index, 0, removed); commit(); });
 }
 async function deleteTake(take) {
   if (readOnly || !(await ask("Supprimer la prise " + take.prise + " ?", "Les autres prises gardent leur numéro (leur clap a déjà été joué).", "Supprimer", true))) return;
