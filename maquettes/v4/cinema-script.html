@@ -1,0 +1,1397 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Cinema Script</title>
+<meta name="oneapp-icon" content="🎬">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Courier+Prime:wght@400;700&display=swap">
+<style>
+/* Cinema Script v4.
+   En haut (défile) : titre, PDF, Premiere Pro, affichage normal / cahier.
+   Barre collée : Scénario | Tournage, recherche, claquette. La claquette ouverte remplace la barre
+   (téléphone : en haut ; ordinateur : colonne de gauche). Deux habillages sur le même contenu :
+   normal (cartes) et cahier (mise en page de scénario de tournage). */
+:root {
+  --bg: #f3f4f6; --panel: #ffffff; --panel-2: #f1f3f5; --line: #e1e4e8; --text: #16181b; --muted: #6b7178;
+  --accent: #1f6feb; --on-accent: #ffffff; --orange: #e8890c; --teal: #1fa98a; --red: #d93036;
+  --av-master: #2e9b4f; --av-ok: #1c74c9; --av-moyen: #8e44ad; --av-bof: #e8890c; --av-ko: #795548; --av-verif: #d6336c;
+  --slate: #15171a; --slate-text: #f6f6f4; --hl: #fff4c2; --shadow: 0 8px 28px rgba(16,24,40,.14);
+  --font: system-ui, -apple-system, "Segoe UI", sans-serif; --type: "Courier Prime", "Courier New", Courier, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0f1113; --panel: #1a1d20; --panel-2: #22262a; --line: #2d3236; --text: #eef1f3; --muted: #8e979e; --accent: #4c9aff; --on-accent: #06172e;
+  --av-ko: #a1887f; --slate: #050607; --hl: #3a3313; --shadow: 0 8px 28px rgba(0,0,0,.5); color-scheme: dark; } }
+:root[data-theme="dark"] { --bg: #0f1113; --panel: #1a1d20; --panel-2: #22262a; --line: #2d3236; --text: #eef1f3; --muted: #8e979e; --accent: #4c9aff; --on-accent: #06172e; --av-ko: #a1887f; --slate: #050607; --hl: #3a3313; --shadow: 0 8px 28px rgba(0,0,0,.5); color-scheme: dark; }
+* { box-sizing: border-box; }
+body { margin: 0; background: var(--bg); color: var(--text); font-family: var(--font); font-size: 16px; }
+button, input, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.cs-dragging, .cs-dragging * { user-select: none; -webkit-user-select: none; cursor: grabbing !important; }
+.page { max-width: 780px; margin: 0 auto; padding: 14px 14px calc(150px + env(safe-area-inset-bottom, 0px)); }
+
+/* --- Haut de page --- */
+.top { display: grid; gap: 10px; padding-bottom: 12px; }
+.top h1 { margin: 0; font-size: 1.45rem; line-height: 1.2; }
+.top-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.tbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 9px 12px; font-weight: 700; font-size: .9rem; }
+.tbtn.pdf1 { background: var(--orange); border-color: var(--orange); color: #111; }
+.tbtn.pdf2 { background: var(--teal); border-color: var(--teal); color: #071c17; }
+.tbtn.pr { background: #2a0a4a; border-color: #2a0a4a; color: #e8c6ff; font-family: var(--font); letter-spacing: .02em; }
+
+/* --- Barre collée --- */
+.stick { position: sticky; top: 0; z-index: 20; background: var(--bg); padding: 6px 0 10px; }
+.bar { display: flex; gap: 8px; align-items: stretch; }
+.seg { flex: 1; display: grid; grid-template-columns: 1fr 1fr; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 3px; min-width: 0; }
+.seg button { border: none; background: none; padding: 9px 4px; border-radius: 9px; font-weight: 700; color: var(--muted); white-space: nowrap; }
+.seg button.on { background: var(--accent); color: var(--on-accent); }
+.ic { width: 46px; flex: none; border-radius: 12px; border: 1px solid var(--line); background: var(--panel); font-size: 1.15rem; }
+.ic.on { border-color: var(--accent); }
+.ic.slate-btn { background: var(--slate); border-color: var(--slate); background-image: linear-gradient(var(--slate), var(--slate)), repeating-linear-gradient(-45deg, var(--slate-text) 0 5px, var(--slate) 5px 10px); background-size: 100% calc(100% - 9px), 100% 9px; background-position: bottom, top; background-repeat: no-repeat; }
+.search { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; margin-top: 8px; }
+.search input { padding: 10px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel); }
+.search small { color: var(--muted); }
+body.clap .stick { display: none; }
+
+/* --- Claquette --- */
+.clapper { display: none; }
+body.clap .clapper { display: block; position: sticky; top: 0; z-index: 25; padding: 6px 0 10px; background: var(--bg); }
+.cl { background: var(--slate); color: var(--slate-text); border-radius: 16px; overflow: hidden; box-shadow: var(--shadow); }
+.cl-stripes { position: relative; height: 26px; background: repeating-linear-gradient(-45deg, var(--slate-text) 0 13px, var(--slate) 13px 26px); }
+.cl.impro .cl-stripes { background: repeating-linear-gradient(-45deg, var(--orange) 0 13px, var(--slate) 13px 26px); }
+.cl-x { position: absolute; right: 6px; top: 3px; width: 34px; height: 34px; border-radius: 50%; border: 2px solid var(--slate-text); background: var(--slate); color: var(--slate-text); font-weight: 700; z-index: 1; }
+.cl-body { padding: 10px 12px 12px; display: grid; gap: 8px; grid-template-columns: minmax(0, 1fr); }
+.cl-nums { display: flex; align-items: flex-end; gap: 14px; }
+.cl-nums div { display: grid; }
+.cl-nums small { font-size: .62rem; letter-spacing: .14em; opacity: .65; }
+.cl-nums b { font-size: 1.9rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.cl-nums .take b { color: #ffd54a; }
+.cl-impro { margin-left: auto; border: 1px solid var(--orange); background: none; color: var(--orange); border-radius: 14px; padding: 5px 10px; font-weight: 700; font-size: .82rem; }
+.cl-text { font-size: .95rem; line-height: 1.35; opacity: .9; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cl-more { display: none; }
+.cl-row { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px; }
+.cl-clap { border: none; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-weight: 800; padding: 0 16px; font-size: 1.05rem; }
+.cl-row input { min-width: 0; border-radius: 10px; border: 1px solid rgba(255,255,255,.2); background: rgba(255,255,255,.08); padding: 10px 12px; color: var(--slate-text); }
+.cl-avis { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 6px; }
+.av { --av: #888; border: 2px solid var(--av); background: rgba(255,255,255,.06); color: var(--slate-text); border-radius: 10px; display: grid; justify-items: center; padding: 5px 0; min-height: 50px; }
+.av span { font-size: 1.2rem; line-height: 1.1; }
+.av b { font-size: .64rem; color: var(--av); }
+.av:active, .cl-clap:active { transform: scale(.96); }
+.cl-empty { opacity: .8; font-size: .95rem; padding: 4px 0; }
+.k-master { --av: var(--av-master); } .k-ok { --av: var(--av-ok); } .k-moyen { --av: var(--av-moyen); } .k-bof { --av: var(--av-bof); } .k-ko { --av: var(--av-ko); } .k-verif { --av: var(--av-verif); }
+.cl-takes { display: grid; gap: 4px; }
+.cl-takes div { display: flex; gap: 8px; align-items: baseline; font-size: .88rem; border-left: 3px solid var(--av); padding-left: 8px; }
+.cl-takes small { opacity: .7; }
+/* Ordinateur : la claquette devient une colonne à gauche, la page se décale */
+@media (min-width: 900px) {
+  body.clap .clapper { position: fixed; left: 0; top: 0; bottom: 0; width: 360px; padding: 14px; overflow-y: auto; }
+  body.clap .page { margin-left: 380px; }
+  body.clap .cl-text { -webkit-line-clamp: unset; display: block; font-size: 1.05rem; }
+  body.clap .cl-more { display: grid; gap: 10px; }
+  .cl-nums b { font-size: 2.4rem; }
+  .cl-avis { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  .av { min-height: 62px; }
+  .cl-row { grid-template-columns: minmax(0, 1fr); }
+  .cl-clap { padding: 14px; font-size: 1.2rem; }
+}
+
+/* --- Listes (habillage normal) --- */
+.seq { margin-bottom: 22px; }
+.seq-head { background: var(--panel); border-radius: 14px; padding: 12px 14px; display: grid; gap: 4px; border-top: 4px solid var(--c); }
+.lbl { font-size: .72rem; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.num { display: flex; align-items: center; gap: 8px; }
+.num .n { font-size: 1.25rem; color: var(--c); }
+.num .k, .snum.r { display: none; }
+.seq-head .cs-edit { font-weight: 700; font-size: 1.1rem; }
+.plans { display: grid; gap: 8px; margin: 8px 0 0 14px; }
+.plan { background: var(--panel); border-radius: 12px; padding: 10px 12px; display: grid; gap: 4px; border-left: 4px solid var(--c); }
+.plan.impro { box-shadow: inset 0 -3px 0 var(--orange); }
+.tools { display: none; gap: 6px; flex-wrap: wrap; padding-top: 4px; }
+.plan:focus-within .tools, .seq-head:focus-within .tools { display: flex; }
+.tool { border: 1px solid var(--line); background: var(--panel-2); border-radius: 18px; padding: 6px 12px; font-size: .85rem; font-weight: 600; }
+.tool.danger { color: var(--red); }
+.cs-edit { width: 100%; border: none; background: transparent; padding: 2px 0; resize: none; overflow: hidden; line-height: 1.5; font-size: 1.06rem; }
+.cs-edit:focus { outline: none; }
+.ro { white-space: pre-wrap; line-height: 1.5; font-size: 1.06rem; padding: 2px 0; }
+.seq-head .ro { font-weight: 700; font-size: 1.1rem; }
+.vid { display: inline-flex; gap: 8px; align-items: center; border: none; background: var(--panel-2); border-radius: 8px; padding: 4px 10px 4px 4px; font-size: .85rem; max-width: 100%; justify-self: start; }
+.vid i { width: 40px; height: 24px; border-radius: 4px; background: linear-gradient(135deg, #0f2027, #2c5364); color: #fff; display: grid; place-items: center; font-style: normal; font-size: .7rem; flex: none; }
+.vid span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dots { display: inline-flex; gap: 3px; }
+.dots i { width: 8px; height: 8px; border-radius: 50%; background: var(--av); }
+.empty { color: var(--muted); font-style: italic; padding: 8px 2px; }
+.tag { font-size: .75rem; font-weight: 700; color: var(--accent); display: block; }
+.tag.next { color: var(--teal); }
+/* Plan pris en claquette */
+body.clap .plan, body.clap .row { cursor: pointer; }
+.plan.cur, .row.cur { outline: 3px solid var(--accent); outline-offset: -1px; }
+.plan.done, .row.done { opacity: .72; }
+
+/* Feuille de service : journées repliables */
+.day { margin-bottom: 16px; }
+.day-head { background: var(--panel); border-radius: 12px; padding: 8px 10px; display: grid; grid-template-columns: auto minmax(0, 1fr) auto auto; gap: 2px 8px; align-items: center; border-top: 4px solid var(--orange); }
+.day-head .cs-edit, .day-head .dname { font-weight: 700; font-size: 1.1rem; }
+.day-head small { grid-column: 2 / -1; color: var(--muted); font-size: .82rem; }
+.mini { width: 34px; height: 34px; border: none; background: none; color: var(--muted); border-radius: 8px; }
+.rows { display: grid; gap: 8px; margin: 8px 0 0 10px; }
+.row { background: var(--panel); border-radius: 12px; padding: 10px 12px 10px 4px; display: grid; grid-template-columns: auto auto minmax(0, 1fr) auto; gap: 8px; align-items: start; border-left: 4px solid var(--c); }
+.row.impro { box-shadow: inset 0 -3px 0 var(--orange); }
+.handle { touch-action: none; user-select: none; border: none; background: none; color: var(--muted); font-size: 1.3rem; padding: 2px 4px; cursor: grab; }
+.code { font-weight: 800; color: var(--c); min-width: 40px; padding-top: 2px; display: grid; gap: 4px; }
+.rtext { line-height: 1.45; font-size: 1.04rem; white-space: pre-wrap; }
+.rtext small { display: block; color: var(--muted); font-size: .8rem; }
+.temps { width: 84px; padding: 6px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--panel-2); font-size: .85rem; }
+.temps.ro { border-color: transparent; background: none; text-align: right; color: var(--muted); padding: 2px; }
+
+/* --- Boutons de création (à glisser) --- */
+.adders { position: fixed; right: 14px; bottom: calc(16px + env(safe-area-inset-bottom, 0px)); z-index: 30; display: flex; gap: 8px; }
+body.clap .adders, body.typing .adders { display: none; }
+.adder { border: none; border-radius: 22px; padding: 12px 16px; font-weight: 700; background: var(--accent); color: var(--on-accent); box-shadow: var(--shadow); touch-action: none; cursor: grab; }
+.adder.alt { background: var(--panel); color: var(--text); border: 1px solid var(--line); }
+.adder.wiggle { animation: wiggle .6s ease; }
+@keyframes wiggle { 0%, 100% { transform: none; } 20% { transform: translateY(-8px) rotate(-4deg); } 40% { transform: translateY(0) rotate(4deg); } 60% { transform: translateY(-4px) rotate(-2deg); } 80% { transform: rotate(1deg); } }
+.drag-hint { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 75; background: var(--accent); color: var(--on-accent); padding: 10px 14px; border-radius: 12px; font-weight: 600; max-width: min(92vw, 440px); text-align: center; box-shadow: var(--shadow); animation: drop .2s ease-out; }
+@keyframes drop { from { transform: translate(-50%, -12px); opacity: 0; } }
+
+/* --- Glisser, fenêtres --- */
+.cs-ghost { position: fixed; z-index: 60; pointer-events: none; transform: translate(-50%, -100%); background: var(--panel); border: 2px solid var(--accent); border-radius: 20px; padding: 6px 12px; font-weight: 700; box-shadow: var(--shadow); white-space: nowrap; }
+.cs-line { position: fixed; z-index: 55; pointer-events: none; height: 4px; background: var(--accent); border-radius: 2px; }
+.cs-line span { position: absolute; left: 10px; top: -14px; background: var(--accent); color: var(--on-accent); font-size: .8rem; font-weight: 700; padding: 3px 10px; border-radius: 12px; white-space: nowrap; }
+.cs-into { outline: 3px dashed var(--accent) !important; outline-offset: 2px; }
+.cs-flash { animation: fl 1.5s ease-out; }
+@keyframes fl { 0%, 35% { box-shadow: 0 0 0 3px var(--accent); } }
+@media (prefers-reduced-motion: reduce) { .cs-flash, .adder.wiggle, .drag-hint { animation: none; } }
+.cs-toast { position: fixed; left: 50%; transform: translateX(-50%); bottom: calc(80px + env(safe-area-inset-bottom, 0px)); z-index: 70; background: var(--text); color: var(--bg); border-radius: 12px; padding: 12px 14px; display: flex; gap: 14px; align-items: center; max-width: min(92vw, 480px); box-shadow: var(--shadow); }
+.cs-toast button { border: none; background: none; color: var(--accent); font-weight: 800; text-transform: uppercase; }
+.cs-modal-back { position: fixed; inset: 0; z-index: 80; background: rgba(0,0,0,.45); display: flex; align-items: flex-end; justify-content: center; }
+.cs-modal { background: var(--panel); width: min(600px, 100%); border-radius: 18px 18px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); display: grid; gap: 12px; max-height: 88vh; overflow-y: auto; }
+.cs-modal h3 { margin: 0; font-size: 1.15rem; }
+.cs-modal p { margin: 0; color: var(--muted); line-height: 1.45; }
+.cs-actions { display: flex; gap: 8px; justify-content: flex-end; flex-wrap: wrap; }
+.cs-btn { border: 1px solid var(--line); background: var(--panel-2); border-radius: 10px; padding: 11px 16px; font-weight: 700; }
+.cs-btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
+.cs-btn.danger { background: var(--red); color: #fff; border-color: var(--red); }
+.cs-btn.impro { background: var(--orange); color: #000; border-color: var(--orange); }
+.cs-input { width: 100%; padding: 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); font-size: 1.1rem; }
+.cs-error { color: var(--red) !important; font-weight: 600; }
+.cs-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.cs-chip { border: 1px solid var(--line); background: var(--panel-2); border-radius: 16px; padding: 7px 12px; font-weight: 700; }
+.cs-chip.on { background: var(--orange); border-color: var(--orange); color: #000; }
+.cs-video { aspect-ratio: 16 / 9; max-width: 100%; background: #000; color: #fff; border-radius: 10px; display: grid; place-items: center; font-size: 2.4rem; }
+.move-num { display: flex; align-items: center; gap: 10px; font-size: 1.3rem; font-weight: 800; }
+.move-num input { width: 7rem; font-size: 1.3rem; font-weight: 800; }
+.pr-steps { display: grid; gap: 10px; margin: 0; padding: 0; list-style: none; }
+.pr-steps li { display: grid; grid-template-columns: 2rem 1fr; gap: 8px; align-items: start; color: var(--muted); line-height: 1.45; }
+.pr-steps li b { color: var(--text); }
+.pr-steps .ico { font-size: 1.3rem; }
+.legend { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 6px; }
+.legend div { display: flex; gap: 8px; align-items: center; font-size: .9rem; }
+.legend i { width: 18px; height: 18px; border-radius: 4px; background: var(--av); flex: none; }
+.back { display: inline-block; margin-top: 30px; font-size: .8rem; color: var(--muted); }
+
+/* --- Habillage « cahier » : même contenu, mise en page de scénario de tournage --- */
+body.cahier { --bg: #e7e7e3; --panel: #ffffff; --panel-2: #f2f2ee; --line: #d6d6d0; --text: #141414; --muted: #6c6c68; --accent: #141414; --on-accent: #ffffff; font-family: var(--type); }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) body.cahier { --bg: #0b0b0b; --panel: #161616; --panel-2: #1f1f1f; --line: #2e2e2c; --text: #ecebe6; --muted: #9a9a94; --accent: #ecebe6; --on-accent: #111; } }
+:root[data-theme="dark"] body.cahier { --bg: #0b0b0b; --panel: #161616; --panel-2: #1f1f1f; --line: #2e2e2c; --text: #ecebe6; --muted: #9a9a94; --accent: #ecebe6; --on-accent: #111; }
+body.cahier .page { background: var(--panel); min-height: 100vh; box-shadow: 0 0 0 1px var(--line); padding-left: 18px; padding-right: 18px; }
+@media (min-width: 700px) { body.cahier .page { padding-left: 48px; padding-right: 48px; } }
+body.cahier .top h1 { text-align: center; text-transform: uppercase; text-decoration: underline; text-underline-offset: 5px; font-size: 1.1rem; letter-spacing: .06em; }
+body.cahier .top-actions { justify-content: center; }
+body.cahier .tbtn { border-radius: 0; border: 1px solid var(--text); background: none; color: var(--text); font-weight: 400; text-transform: uppercase; font-size: .78rem; }
+body.cahier .stick, body.cahier.clap .clapper { background: var(--panel); }
+body.cahier .seg, body.cahier .ic { border-radius: 0; border-color: var(--text); }
+body.cahier .seg button { border-radius: 0; text-transform: uppercase; font-weight: 400; letter-spacing: .02em; font-size: .85rem; }
+body.cahier .seg button.on { background: var(--text); color: var(--panel); }
+body.cahier .seq-head, body.cahier .plan, body.cahier .row, body.cahier .day-head { background: none; border: none; border-radius: 0; box-shadow: none; padding-left: 0; padding-right: 0; }
+body.cahier .seq-head { grid-template-columns: 3.4rem minmax(0, 1fr) 3.4rem; align-items: start; }
+body.cahier .snum.r { display: block; text-align: right; font-weight: 700; padding-top: 2px; }
+body.cahier .num .lbl { display: none; }
+body.cahier .num { align-items: flex-start; flex-direction: column; gap: 3px; }
+body.cahier .num .n { color: var(--text); font-size: 1rem; }
+body.cahier .seq-head .cs-edit, body.cahier .seq-head .ro { text-transform: uppercase; font-size: 1rem; }
+body.cahier .plans { margin: 0; gap: 4px; }
+body.cahier .plan { grid-template-columns: 3.4rem minmax(0, 1fr); padding: 6px 0; }
+body.cahier .plan .num .n { display: none; }
+body.cahier .plan .num .k { display: block; font-weight: 400; color: var(--muted); }
+body.cahier .plan .pmain { grid-column: 2; }
+body.cahier .cs-edit, body.cahier .ro, body.cahier .rtext { font-size: 1rem; line-height: 1.55; }
+body.cahier .cs-edit:focus { background: var(--hl); }
+body.cahier .plan.cur, body.cahier .row.cur { outline: none; background: var(--hl); box-shadow: -12px 0 0 var(--hl), 12px 0 0 var(--hl); }
+body.cahier .plan.impro, body.cahier .row.impro { box-shadow: none; }
+body.cahier .plan.impro .num .k, body.cahier .row.impro .code { color: var(--orange); }
+body.cahier .tool, body.cahier .vid { border-radius: 0; background: none; border: 1px solid var(--line); }
+body.cahier .vid i { display: none; }
+body.cahier .vid { text-decoration: underline; border: none; padding: 0; color: var(--muted); }
+body.cahier .day-head { border-bottom: 2px solid var(--text); border-top: none; padding-bottom: 4px; }
+body.cahier .day-head .cs-edit, body.cahier .day-head .dname { text-transform: uppercase; font-size: 1rem; }
+body.cahier .rows { margin: 0; gap: 0; }
+body.cahier .row { border-bottom: 1px dotted var(--line); padding: 10px 0; grid-template-columns: auto 3.4rem minmax(0, 1fr) auto; }
+body.cahier .code { color: var(--text); font-weight: 700; }
+body.cahier .rtext small { text-transform: uppercase; font-size: .75rem; }
+body.cahier .temps { border: none; background: none; text-align: right; color: var(--muted); }
+body.cahier .tag { color: var(--red); text-transform: uppercase; }
+body.cahier .tag.next { color: var(--text); }
+body.cahier .adder { border-radius: 0; font-family: var(--type); text-transform: uppercase; font-size: .85rem; }
+body.cahier .adder.alt { background: var(--panel); }
+body.cahier .cl { border-radius: 0; font-family: var(--type); }
+body.cahier .cl-clap { border-radius: 0; background: var(--slate-text); color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
+body.cahier .av, body.cahier .cl-row input { border-radius: 0; }
+body.cahier .cs-modal { border-radius: 0; border-top: 3px solid var(--text); font-family: var(--type); }
+body.cahier .cs-btn, body.cahier .cs-input, body.cahier .cs-chip { border-radius: 0; }
+body.cahier .cs-ghost { border-radius: 0; }
+body.cahier .cs-line { background: var(--red); }
+body.cahier .cs-line span { background: var(--red); color: #fff; border-radius: 0; }
+</style>
+</head>
+<body>
+<!--
+CINEMA SCRIPT v4 (maquette, version One App).
+Structure de app_data (CONTRAT avec l'extension Premiere : ne pas renommer ces champs) :
+{
+  v: 1,
+  sequences:    [ { id, info } ],
+  plans:        [ { seqId, id, impro: 0|1, info, temps, video: null | { id, name } } ],
+  takes:        [ { uid, seqId, planId, prise, avis, com, timestamp } ],
+  tournageList: [ { type: "plan", seqId, planId } | { type: "sep", text } ],
+  ui:           { style: "normal"|"cahier", view: "scenario"|"tournage", clap: bool, active: { seqId, planId } | null }
+}
+- ui : là où on en était (affichage, liste, claquette, plan en cours), ignoré par l'extension.
+- Les libellés d'avis sont lus par l'extension. La classe DigitalClapper est une copie exacte de l'original.
+-->
+<div class="page" id="page">
+  <header class="top">
+    <h1 id="proj">Projet</h1>
+    <div class="top-actions">
+      <button class="tbtn pdf1" id="bPdfD" type="button">📄 PDF Découpage</button>
+      <button class="tbtn pdf2" id="bPdfF" type="button">📄 PDF Feuille de service</button>
+      <button class="tbtn pr" id="bPr" type="button" title="L'extension Premiere Pro">Pr</button>
+      <button class="tbtn" id="bStyle" type="button"></button>
+    </div>
+  </header>
+  <div class="stick" id="stick">
+    <div class="bar">
+      <div class="seg" role="tablist" aria-label="Liste affichée">
+        <button type="button" data-view="scenario">📖 Scénario</button>
+        <button type="button" data-view="tournage">🗓️ Tournage</button>
+      </div>
+      <button class="ic" id="bSearch" type="button" title="Rechercher un plan" aria-label="Rechercher">🔍</button>
+      <button class="ic slate-btn" id="bClap" type="button" title="Ouvrir la claquette" aria-label="Ouvrir la claquette"></button>
+    </div>
+    <div class="search" id="search" hidden>
+      <input type="search" id="q" placeholder="Mot, personnage, décor… ou 5 / 5.3" autocomplete="off" aria-label="Rechercher">
+      <small id="qn"></small>
+    </div>
+  </div>
+  <aside class="clapper" id="clapper" aria-label="Claquette" data-nokb></aside>
+  <main id="list"></main>
+</div>
+<div class="adders" id="adders"></div>
+
+<script>
+/*
+ * Cinema Script v4 · noyau (données, numérotation, clap, glisser, clavier, PDF).
+ * Données (même format que l'app, contrat avec l'extension Premiere), numérotation, clap audio,
+ * glisser-déposer, clavier sur téléphone, PDF. L'affichage est plus bas, dans la page.
+ * app_data.ui garde l'affichage (normal / cahier), la liste ouverte, la claquette et le plan en cours :
+ * après un rechargement on revient au même endroit. L'extension Premiere ignore ce champ.
+ *
+ * Règles de numérotation (phase de préparation) :
+ * - les plans d'une séquence sont toujours 1, 2, 3… (insérer, supprimer, changer un numéro décale les autres) ;
+ * - les séquences peuvent avoir des trous (préparer la 10 sans les autres) : une séquence insérée prend
+ *   « précédente + 1 » et ne décale que les numéros qui se suivent ;
+ * - les numéros de prise ne sont jamais renumérotés (prise suivante = max + 1) ;
+ * - on ne prévient que si des prises déjà tournées changeraient de numéro (leur clap garde l'ancien).
+ */
+(function () {
+"use strict";
+const CS = (window.CS = {});
+
+// --- AVIS (libellés lus par l'extension : ne pas modifier) ---
+const AVIS = ["❓ À vérifier", "✅ OK (Bonne)", "⭐ MASTER (Parfaite)", "😐 Moyen", "😕 Bof", "❌ KO (Ratée)"];
+CS.AVIS = AVIS;
+CS.AVIS_BUTTONS = [
+  { label: AVIS[2], e: "⭐", s: "Master", k: "master" }, { label: AVIS[1], e: "✅", s: "OK", k: "ok" },
+  { label: AVIS[3], e: "😐", s: "Moyen", k: "moyen" }, { label: AVIS[4], e: "😕", s: "Bof", k: "bof" },
+  { label: AVIS[5], e: "❌", s: "KO", k: "ko" }, { label: AVIS[0], e: "❓", s: "À vérifier", k: "verif" }
+];
+CS.avisKey = function (a) {
+  a = a || "";
+  if (a.includes("MASTER")) return "master";
+  if (a.includes("OK")) return "ok";
+  if (a.includes("Moyen")) return "moyen";
+  if (a.includes("Bof")) return "bof";
+  if (a.includes("KO")) return "ko";
+  return "verif";
+};
+CS.avisShort = (a) => (CS.AVIS_BUTTONS.find((b) => b.label === a) || CS.AVIS_BUTTONS[5]);
+
+// --- CLAP AUDIO (copie exacte de l'original, ne pas modifier) ---
+class DigitalClapper {
+    constructor() {
+        this.audioCtx = null;
+        this.dtmfFreqs = {
+            //'1': [697, 1209], '2': [697, 1336], '3': [697, 1477],
+            //'4': [770, 1209], '5': [770, 1336], '6': [770, 1477],
+            //'7': [852, 1209], '8': [852, 1336], '9': [852, 1477],
+            //'*': [941, 1209], '0': [941, 1336], '#': [941, 1477]
+
+            '1': [10697, 12209], '2': [10697, 12336], '3': [10697, 12477],
+            '4': [10770, 12209], '5': [10770, 12336], '6': [10770, 12477],
+            '7': [10852, 12209], '8': [10852, 12336], '9': [10852, 12477],
+            '*': [10941, 12209], '0': [10941, 12336], '#': [10941, 12477]
+        };
+    }
+    play(scene, shot, take) {
+        if (!this.audioCtx) {
+            this.audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this.audioCtx.state === 'suspended') {
+            this.audioCtx.resume();
+        }
+        const payload = `*${scene}*${shot}*${take}#*`;
+        const now = this.audioCtx.currentTime;
+
+        //this._playTransient(now);
+
+        let timeCursor = now + 0.065;
+        const toneDuration = 0.080;
+        const pauseDuration = 0.120;
+        for (let i = 0; i < payload.length; i++) {
+            const char = payload[i];
+            if (this.dtmfFreqs[char]) {
+                this._playDTMF(this.dtmfFreqs[char][0], this.dtmfFreqs[char][1], timeCursor, toneDuration);
+                timeCursor += toneDuration + pauseDuration;
+            }
+        }
+
+    }
+    _playTransient(startTime) {
+        const clickOsc = this.audioCtx.createOscillator();
+        const clickGain = this.audioCtx.createGain();
+        clickOsc.type = 'square';
+        clickOsc.frequency.value = 1000;
+        clickGain.gain.setValueAtTime(0, startTime);
+        clickGain.gain.linearRampToValueAtTime(1, startTime + 0.001);
+        clickGain.gain.setValueAtTime(1, startTime + 0.010);
+        clickGain.gain.linearRampToValueAtTime(0, startTime + 0.015);
+        clickOsc.connect(clickGain);
+        clickGain.connect(this.audioCtx.destination);
+        clickOsc.start(startTime);
+        clickOsc.stop(startTime + 0.020);
+    }
+    _playDTMF(f1, f2, startTime, duration) {
+        const osc1 = this.audioCtx.createOscillator();
+        const osc2 = this.audioCtx.createOscillator();
+        const gainNode = this.audioCtx.createGain();
+        osc1.frequency.value = f1;
+        osc2.frequency.value = f2;
+        osc1.type = 'sine';
+        osc2.type = 'sine';
+        gainNode.gain.setValueAtTime(0, startTime);
+        gainNode.gain.linearRampToValueAtTime(0.75, startTime + 0.005);
+        gainNode.gain.setValueAtTime(0.75, startTime + duration - 0.005);
+        gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+        osc1.connect(gainNode);
+        osc2.connect(gainNode);
+        gainNode.connect(this.audioCtx.destination);
+        osc1.start(startTime);
+        osc2.start(startTime);
+        osc1.stop(startTime + duration);
+        osc2.stop(startTime + duration);
+    }
+}
+
+CS.clapper = new DigitalClapper();
+CS.clap = function () { const a = CS.active; if (a) CS.clapper.play(a.seqId, a.planId, CS.nextTake(a.seqId, a.planId)); };
+
+// --- Projet d'exemple (utilisé seulement hors de One App) ---
+function demoData() {
+  const S = (id, info) => ({ id, info });
+  const P = (seqId, id, info, temps, video) => ({ seqId, id, impro: 0, info, temps, video: video ? { id: "demo", name: video } : null });
+  const sequences = [
+    S(1, "INT. CUISINE – JOUR\nMarie, Paul"), S(2, "INT. SALON – JOUR\nMarie, Paul"),
+    S(5, "EXT. RUE DEVANT L'IMMEUBLE – NUIT\nPaul"), S(6, "INT. CAGE D'ESCALIER – NUIT\nMarie, la voisine"),
+    S(7, "INT. APPARTEMENT DE LA VOISINE – NUIT\nMarie, la voisine"), S(9, "EXT. TOIT DE L'IMMEUBLE – AUBE\nMarie, Paul")
+  ];
+  const plans = [
+    P(1, 1, "PL fixe. Marie entre, pose les courses. Paul lit sans lever les yeux.", "20 min"),
+    P(1, 2, "PM travelling. Les mains de Marie rangent, jusqu'au frigo vide.", "30 min", "repetition_cuisine_1-2.mp4"),
+    P(1, 3, "GP. Paul lève enfin les yeux de son journal.", "15 min"),
+    P(1, 4, "Champ-contrechamp : « Tu as encore oublié le pain. »", "40 min"),
+    P(2, 1, "PE. Le salon en désordre, Marie traverse.", "20 min"),
+    P(2, 2, "PR. Paul au téléphone, dos à la fenêtre.", "25 min"),
+    P(2, 3, "Insert. La photo de mariage retournée.", "10 min"),
+    P(5, 1, "PE grue. Paul sort de l'immeuble, la rue est vide.", "45 min", "demo_grue_5-1.mp4"),
+    P(5, 2, "PA épaule. Paul allume une cigarette, hésite.", "25 min"),
+    P(5, 3, "Insert. Le briquet qui ne s'allume pas.", "10 min"),
+    P(5, 4, "PL. Paul s'éloigne sous les réverbères.", "20 min"),
+    P(6, 1, "PM panoramique. La voisine entrouvre sa porte.", "30 min"),
+    P(6, 2, "GP. Marie, essoufflée, s'arrête sur le palier.", "20 min"),
+    P(6, 3, "Plongée. La cage d'escalier vue du dernier étage.", "25 min"),
+    P(7, 1, "PE. L'appartement encombré de plantes.", "20 min"),
+    P(7, 2, "Champ-contrechamp. La voisine sert le thé.", "45 min"),
+    P(9, 1, "PL. Le jour se lève sur les toits.", "30 min", "reperage_toit_9-1.mp4"),
+    P(9, 2, "PM. Marie et Paul assis côte à côte.", "30 min"),
+    P(9, 3, "GP. La main de Paul cherche celle de Marie.", "15 min")
+  ];
+  const sep = (text) => ({ type: "sep", text });
+  const pl = (k) => { const [s, p] = k.split(".").map(Number); return { type: "plan", seqId: s, planId: p }; };
+  const tournageList = [
+    sep("Lundi 14 · matin · Appartement"), ...["1.1", "1.2", "1.3", "2.1", "2.2", "1.4", "2.3"].map(pl),
+    sep("Lundi 14 · après-midi · Cage d'escalier"), ...["6.1", "6.2", "7.1", "6.3", "7.2"].map(pl),
+    sep("Mardi 15 · nuit · Rue"), ...["5.1", "5.2", "5.3", "5.4"].map(pl),
+    sep("Mercredi 16 · aube · Toit"), ...["9.1", "9.2", "9.3"].map(pl)
+  ];
+  const takes = [];
+  let t = Date.parse("2026-10-14T06:40:00Z");
+  const T = (k, avis, com) => {
+    const [s, p] = k.split(".").map(Number);
+    t += 7 * 60000;
+    takes.push({ uid: "demo" + takes.length, seqId: s, planId: p, prise: takes.filter((x) => x.seqId === s && x.planId === p).length + 1, avis, com: com || "", timestamp: new Date(t).toISOString() });
+  };
+  T("1.1", AVIS[5], "Perche dans le champ"); T("1.1", AVIS[1]); T("1.1", AVIS[2], "La bonne");
+  T("1.2", AVIS[4], "Bruit de frigo"); T("1.2", AVIS[1]);
+  T("1.3", AVIS[3], "Regard trop tôt"); T("1.3", AVIS[2]);
+  T("2.1", AVIS[1]);
+  T("2.2", AVIS[5], "Texte oublié"); T("2.2", AVIS[3], "Point flou en fin de plan");
+  return { v: 1, sequences, plans, takes, tournageList };
+}
+
+CS.demoData = demoData;
+
+window.OneAppAPI = window.OneAppAPI || {
+  loadData: async () => ({ app_data: demoData(), readOnly: false }),
+  saveData: () => {},
+  onDataChange: () => {},
+  onModeChange: () => {},
+  getFileName: () => "Le Dernier Métro (exemple)",
+  onNameChange: () => {}
+};
+
+// --- DONNÉES ---
+const DEFAULT_STATE = { v: 1, sequences: [{ id: 1, info: "" }], plans: [{ seqId: 1, id: 1, impro: 0, info: "", temps: "", video: null }], takes: [], tournageList: [{ type: "plan", seqId: 1, planId: 1 }] };
+function newUid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 8); }
+CS.normalize = function (data) {
+  if (!data || Array.isArray(data) || typeof data !== "object") return structuredClone(DEFAULT_STATE);
+  const s = { ...structuredClone(DEFAULT_STATE), ...data };
+  ["sequences", "plans", "takes", "tournageList"].forEach((k) => { if (!Array.isArray(s[k])) s[k] = []; });
+  s.takes.forEach((t) => { if (!t.uid) t.uid = newUid(); });
+  s.plans.forEach((p) => { if (p.video === undefined) p.video = null; });
+  s.plans.forEach((p) => {
+    if (!s.tournageList.some((i) => i.type === "plan" && i.seqId === p.seqId && i.planId === p.id)) s.tournageList.push({ type: "plan", seqId: p.seqId, planId: p.id });
+  });
+  const ui = s.ui && typeof s.ui === "object" && !Array.isArray(s.ui) ? s.ui : {};
+  s.ui = { style: ui.style === "cahier" ? "cahier" : "normal", view: ui.view === "tournage" ? "tournage" : "scenario", clap: !!ui.clap, active: ui.active || null };
+  s.v = 1;
+  return s;
+};
+CS.state = CS.normalize(null);
+CS.readOnly = false;
+CS.active = null;            // plan en cours de tournage { seqId, planId }
+
+// --- ENREGISTREMENT ---
+let renderFn = () => {};
+let saveTimer = null;
+CS.render = () => renderFn();
+function save() { S().ui.active = CS.active; OneAppAPI.saveData(CS.state); }
+CS.commit = function () { if (CS.readOnly) return; clearTimeout(saveTimer); saveTimer = null; renderFn(); save(); };
+// Préférence d'affichage (enregistrée avec le projet, comme le reste)
+CS.setUI = function (patch) { Object.assign(S().ui, patch); if (!CS.readOnly) { clearTimeout(saveTimer); saveTimer = null; save(); } renderFn(); };
+CS.saveSoon = function () { if (CS.readOnly) return; clearTimeout(saveTimer); saveTimer = setTimeout(() => { saveTimer = null; save(); }, 800); };
+CS.saveNow = function () { if (!saveTimer) return; clearTimeout(saveTimer); saveTimer = null; if (!CS.readOnly) save(); };
+CS.projectName = () => (OneAppAPI.getFileName && OneAppAPI.getFileName()) || "Projet";
+
+// --- LECTURE ---
+const S = () => CS.state;
+CS.key = (p) => p.seqId + "." + p.id;
+CS.seqs = () => [...S().sequences].sort((a, b) => a.id - b.id);
+CS.seq = (id) => S().sequences.find((s) => s.id === id);
+CS.plansOf = (seqId) => S().plans.filter((p) => p.seqId === seqId).sort((a, b) => a.id - b.id);
+CS.plan = (seqId, id) => S().plans.find((p) => p.seqId === seqId && p.id === id);
+CS.takesOf = (seqId, planId) => S().takes.filter((t) => t.seqId === seqId && t.planId === planId).sort((a, b) => a.prise - b.prise);
+CS.nextTake = (seqId, planId) => CS.takesOf(seqId, planId).reduce((m, t) => Math.max(m, t.prise), 0) + 1;
+CS.isActive = (p) => !!CS.active && CS.active.seqId === p.seqId && CS.active.planId === p.id;
+CS.activePlan = () => (CS.active ? CS.plan(CS.active.seqId, CS.active.planId) : null);
+CS.seqTitle = (id) => { const s = CS.seq(id); return s && s.info ? s.info.split("\n")[0] : ""; };
+CS.seqColor = function (seqId) {
+  const i = CS.seqs().findIndex((s) => s.id === seqId);
+  return "hsl(" + ((Math.max(0, i) * 67 + 205) % 360) + " 62% 58%)";
+};
+CS.minutes = function (s) {
+  s = String(s || "").toLowerCase().replace(/\s/g, "");
+  let m = s.match(/(\d+)h(\d+)?/);
+  if (m) return +m[1] * 60 + (+m[2] || 0);
+  m = s.match(/(\d+)/);
+  return m ? +m[1] : 0;
+};
+CS.fmtMin = (m) => (m < 60 ? m + " min" : Math.floor(m / 60) + " h" + (m % 60 ? " " + String(m % 60).padStart(2, "0") : ""));
+CS.lastTake = () => S().takes.reduce((b, t) => (!b || (t.timestamp || "") > (b.timestamp || "") ? t : b), null);
+// Premier plan sans prise après celui de la dernière prise (dans l'ordre de tournage)
+CS.nextToShoot = function () {
+  const last = CS.lastTake(), list = S().tournageList;
+  const start = last ? list.findIndex((i) => i.type === "plan" && i.seqId === last.seqId && i.planId === last.planId) + 1 : 0;
+  for (let k = Math.max(0, start); k < list.length; k++) {
+    const i = list[k];
+    if (i.type === "plan" && CS.plan(i.seqId, i.planId) && !CS.takesOf(i.seqId, i.planId).length) return CS.plan(i.seqId, i.planId);
+  }
+  return null;
+};
+// Journées : les séparateurs du plan de travail et les plans qui les suivent
+CS.days = function () {
+  const groups = [];
+  let g = null;
+  S().tournageList.forEach((item, index) => {
+    if (item.type === "sep") { g = { sep: item, index, items: [] }; groups.push(g); return; }
+    if (!g) { g = { sep: null, index: -1, items: [] }; groups.push(g); }
+    const p = CS.plan(item.seqId, item.planId);
+    if (p) g.items.push({ index, p });
+  });
+  return groups;
+};
+CS.dayEnd = function (sepIndex) {
+  const n = S().tournageList.findIndex((i, k) => k > sepIndex && i.type === "sep");
+  return n === -1 ? S().tournageList.length : n;
+};
+CS.dayOf = (p) => CS.days().find((g) => g.items.some((x) => x.p === p)) || null;
+CS.orderIndex = (p) => S().tournageList.findIndex((i) => i.type === "plan" && i.seqId === p.seqId && i.planId === p.id);
+CS.dayMinutes = (g) => g.items.reduce((a, { p }) => a + CS.minutes(p.temps), 0);
+
+// --- RECHERCHE ---
+CS.fold = (s) => String(s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+CS.parseQuery = function (q) {
+  q = CS.fold(q).trim();
+  if (!q) return null;
+  let m = q.match(/^(\d+)$/);
+  if (m) return { seq: +m[1] };
+  m = q.match(/^(\d+)\s*[.\-\/ ]\s*(\d+)$/);
+  if (m) return { seq: +m[1], plan: +m[2] };
+  return { text: q };
+};
+CS.matches = function (p, q) {
+  if (!q) return true;
+  if (q.seq !== undefined) return p.seqId === q.seq && (q.plan === undefined || p.id === q.plan);
+  return CS.fold([p.info, p.temps, (CS.seq(p.seqId) || {}).info, p.video && p.video.name].join(" ")).includes(q.text);
+};
+
+// --- MODIFICATIONS ---
+CS.confirmRenumber = (affected) => (affected
+  ? CS.ask("Prises déjà tournées", "Des prises existent sur les plans renumérotés : leur clap garde l'ancien numéro, la synchronisation au montage ne les retrouvera plus.", "Renuméroter quand même", true)
+  : Promise.resolve(true));
+
+// Change les numéros de plans (Map plan → { seqId, id }) ; prises, plan de travail et plan en cours suivent
+CS.applyMoves = function (moves) {
+  const byOld = new Map();
+  moves.forEach((to, p) => byOld.set(CS.key(p), to));
+  const map = (o, sk, pk) => { const to = byOld.get(o[sk] + "." + o[pk]); if (to) { o[sk] = to.seqId; o[pk] = to.id; } };
+  S().takes.forEach((t) => map(t, "seqId", "planId"));
+  S().tournageList.forEach((i) => { if (i.type === "plan") map(i, "seqId", "planId"); });
+  if (CS.active) map(CS.active, "seqId", "planId");
+  moves.forEach((to, p) => { p.seqId = to.seqId; p.id = to.id; });
+};
+// Mouvements pour que chaque liste soit numérotée 1, 2, 3… dans sa séquence
+function movesFor(lists) {
+  const m = new Map();
+  lists.forEach(({ seqId, order }) => order.forEach((p, i) => { if (p.seqId !== seqId || p.id !== i + 1) m.set(p, { seqId, id: i + 1 }); }));
+  return m;
+}
+const tookShots = (moves) => [...moves.keys()].filter((p) => p.id && CS.takesOf(p.seqId, p.id).length);
+CS.renumberPlans = async function (seqId, order) {
+  const m = movesFor([{ seqId, order }]);
+  if (!m.size) return true;
+  if (!(await CS.confirmRenumber(tookShots(m).length > 0))) return false;
+  CS.applyMoves(m);
+  return true;
+};
+
+function contiguousFrom(ids, start) { const run = []; for (let n = start; ids.includes(n); n++) run.push(n); return run; }
+function shiftSeq(n, d) {
+  S().sequences.find((s) => s.id === n).id = n + d;
+  S().plans.forEach((p) => { if (p.seqId === n) p.seqId = n + d; });
+  S().takes.forEach((t) => { if (t.seqId === n) t.seqId = n + d; });
+  S().tournageList.forEach((i) => { if (i.type === "plan" && i.seqId === n) i.seqId = n + d; });
+  if (CS.active && CS.active.seqId === n) CS.active.seqId = n + d;
+}
+
+// Nouvelle séquence après la séquence afterId (0 = en tête) ; renvoie son numéro
+CS.insertSeq = async function (afterId) {
+  const id = (afterId || 0) + 1;
+  const run = contiguousFrom(S().sequences.map((s) => s.id), id);
+  if (run.length && !(await CS.confirmRenumber(S().takes.some((t) => run.includes(t.seqId))))) return null;
+  [...run].reverse().forEach((n) => shiftSeq(n, 1));
+  S().sequences.push({ id, info: "" });
+  CS.lastShift = { seqs: run.map((n) => n + 1) };
+  CS.commit();
+  return id;
+};
+// Nouveau plan au rang pos (0 = premier) de la séquence ; renvoie le plan
+CS.insertPlan = async function (seqId, pos) {
+  const plans = CS.plansOf(seqId);
+  pos = Math.max(0, Math.min(pos, plans.length));
+  const prev = pos > 0 ? plans[pos - 1] : null;
+  const np = { seqId, id: 0, impro: 0, info: "", temps: "", video: null };
+  const order = [...plans];
+  order.splice(pos, 0, np);
+  if (!(await CS.renumberPlans(seqId, order))) return null;
+  S().plans.push(np);
+  const prevIdx = prev ? CS.orderIndex(prev) : -1;
+  S().tournageList.splice(prevIdx === -1 ? S().tournageList.length : prevIdx + 1, 0, { type: "plan", seqId, planId: np.id });
+  CS.commit();
+  return np;
+};
+// Changer le numéro d'une séquence : "" = fait, texte = erreur, null = annulé
+CS.setSeqNum = async function (oldId, str) {
+  const newId = parseInt(str, 10);
+  if (newId === oldId) return "";
+  if (isNaN(newId) || newId <= 0) return "Numéro invalide.";
+  if (CS.seq(newId)) return "La séquence " + newId + " existe déjà.";
+  if (!(await CS.confirmRenumber(S().takes.some((t) => t.seqId === oldId)))) return null;
+  shiftSeq(oldId, newId - oldId);
+  CS.commit();
+  return "";
+};
+// Déplacer un plan à « séquence.plan » (ex. 2.3) : les plans des deux séquences se renumérotent.
+// "" = fait, texte = erreur à afficher, null = annulé.
+CS.movePlanTo = async function (p, str) {
+  str = String(str || "").trim();
+  const m = str.match(/^(\d+)\s*[.,\-\/ ]\s*(\d+)$/) || str.match(/^(\d+)$/);
+  if (!m) return "Écrivez le nouveau numéro sous la forme séquence.plan, par exemple 2.3.";
+  const seqId = m[2] ? +m[1] : p.seqId;
+  let pos = m[2] ? +m[2] : +m[1];
+  if (pos < 1) return "Numéro invalide.";
+  if (!CS.seq(seqId)) return "La séquence " + seqId + " n'existe pas encore.";
+  const same = seqId === p.seqId;
+  const src = CS.plansOf(p.seqId).filter((x) => x !== p);
+  const dst = same ? src : CS.plansOf(seqId);
+  pos = Math.min(pos, dst.length + 1);
+  if (same && pos === p.id) return "";
+  const order = [...dst];
+  order.splice(pos - 1, 0, p);
+  const moves = movesFor(same ? [{ seqId, order }] : [{ seqId: p.seqId, order: src }, { seqId, order }]);
+  const shot = tookShots(moves), target = seqId + "." + pos;
+  if (shot.length) {
+    if (!(await CS.ask("Des prises ont déjà été tournées",
+      "Ce changement modifie le numéro de plans déjà tournés (" + shot.map(CS.key).join(", ") + ") : leur clap garde l'ancien numéro, la synchronisation au montage ne les retrouvera plus.",
+      "Déplacer quand même", true))) return null;
+  } else if (pos <= dst.length) {
+    if (!(await CS.ask("Le plan " + target + " existe déjà",
+      "Placer " + CS.key(p) + " en " + target + " et décaler les suivants (" + target + " devient " + seqId + "." + (pos + 1) + "…) ?",
+      "Décaler et placer"))) return null;
+  }
+  CS.applyMoves(moves);
+  CS.commit();
+  return "";
+};
+CS.deleteSeq = function (seqId) {
+  S().sequences = S().sequences.filter((s) => s.id !== seqId);
+  S().plans = S().plans.filter((p) => p.seqId !== seqId);
+  S().takes = S().takes.filter((t) => t.seqId !== seqId);
+  S().tournageList = S().tournageList.filter((i) => !(i.type === "plan" && i.seqId === seqId));
+  if (CS.active && CS.active.seqId === seqId) CS.active = null;
+  CS.commit();
+};
+CS.deletePlan = async function (seqId, planId) {
+  S().plans = S().plans.filter((p) => !(p.seqId === seqId && p.id === planId));
+  S().takes = S().takes.filter((t) => !(t.seqId === seqId && t.planId === planId));
+  S().tournageList = S().tournageList.filter((i) => !(i.type === "plan" && i.seqId === seqId && i.planId === planId));
+  if (CS.active && CS.active.seqId === seqId && CS.active.planId === planId) CS.active = null;
+  await CS.renumberPlans(seqId, CS.plansOf(seqId));
+  CS.commit();
+};
+CS.insertDay = function (at, text) { S().tournageList.splice(at, 0, { type: "sep", text: text || "" }); CS.commit(); return at; };
+CS.deleteDay = function (index) { S().tournageList.splice(index, 1); CS.commit(); };
+CS.moveItem = function (from, at) {
+  const item = S().tournageList.splice(from, 1)[0];
+  const to = at > from ? at - 1 : at;
+  S().tournageList.splice(to, 0, item);
+  CS.commit();
+  return to;
+};
+CS.moveDay = function (from, at) {
+  const end = CS.dayEnd(from);
+  if (at >= from && at <= end) return from;
+  const block = S().tournageList.splice(from, end - from);
+  const to = at > from ? at - block.length : at;
+  S().tournageList.splice(to, 0, ...block);
+  CS.commit();
+  return to;
+};
+// Plan improvisé : numéroté en fin de séquence, placé dans l'ordre de tournage en « at » (ou après le plan actif)
+CS.addImpro = function (seqId, at, info) {
+  const id = CS.plansOf(seqId).reduce((m, p) => Math.max(m, p.id), 0) + 1;
+  const p = { seqId, id, impro: 1, info: info || "", temps: "", video: null };
+  S().plans.push(p);
+  if (at === null || at === undefined) {
+    const a = CS.activePlan();
+    at = a ? CS.orderIndex(a) + 1 : S().tournageList.length;
+  }
+  S().tournageList.splice(at, 0, { type: "plan", seqId, planId: id });
+  CS.active = { seqId, planId: id };
+  CS.commit();
+  return p;
+};
+// Enregistre une prise sur le plan actif (confirmation visuelle + Annuler)
+CS.saveTake = function (avis, com) {
+  const p = CS.activePlan();
+  if (CS.readOnly || !p) return null;
+  CS.saveNow();
+  const t = { uid: newUid(), seqId: p.seqId, planId: p.id, prise: CS.nextTake(p.seqId, p.id), avis, com: (com || "").trim(), timestamp: new Date().toISOString() };
+  S().takes.push(t);
+  CS.commit();
+  CS.toast("Prise " + t.prise + " enregistrée · " + avis, () => { S().takes = S().takes.filter((x) => x.uid !== t.uid); CS.commit(); });
+  return t;
+};
+CS.deleteTake = function (uid) { S().takes = S().takes.filter((t) => t.uid !== uid); CS.commit(); };
+// Vidéo de référence : dans l'app, Google Picker (vidéos de Drive) → { id, name }. Ici, une vidéo fictive.
+CS.pickVideo = function (p) { p.video = { id: "demo", name: "demo_plan_" + p.seqId + "-" + p.id + ".mp4" }; CS.commit(); };
+CS.removeVideo = function (p) { p.video = null; CS.commit(); };
+
+// --- ÉLÉMENTS D'INTERFACE ---
+CS.el = function (tag, attrs, ...children) {
+  const e = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v === null || v === undefined || v === false) continue;
+    if (k === "text") e.textContent = v;
+    else if (k === "class") e.className = v;
+    else if (k.startsWith("on")) e.addEventListener(k.slice(2), v);
+    else if (k === "value") e.value = v;
+    else e.setAttribute(k, v === true ? "" : v);
+  }
+  children.flat(Infinity).forEach((c) => { if (c !== null && c !== undefined && c !== false) e.append(c); });
+  return e;
+};
+const el = CS.el;
+CS.autoResize = (t) => { t.style.height = "auto"; t.style.height = t.scrollHeight + "px"; };
+// Texte modifiable sur place, enregistré après une pause
+CS.textField = function (obj, key, placeholder, cls, single) {
+  const f = el(single ? "input" : "textarea", {
+    class: "cs-edit " + (cls || ""), placeholder: CS.readOnly ? "" : placeholder, value: obj[key] || "", readonly: CS.readOnly, rows: single ? null : 1,
+    "aria-label": placeholder, type: single ? "text" : null,
+    oninput: (e) => { obj[key] = e.target.value; if (!single) CS.autoResize(e.target); CS.saveSoon(); },
+    onchange: CS.saveNow
+  });
+  if (!single) requestAnimationFrame(() => CS.autoResize(f));
+  return f;
+};
+let toastTimer = null;
+CS.toast = function (msg, undo) {
+  clearTimeout(toastTimer);
+  document.querySelectorAll(".cs-toast").forEach((t) => t.remove());
+  const t = el("div", { class: "cs-toast", role: "status" }, el("span", { text: msg }),
+    undo ? el("button", { type: "button", text: "Annuler", onclick: () => { undo(); t.remove(); } }) : null);
+  document.body.append(t);
+  toastTimer = setTimeout(() => t.remove(), undo ? 6000 : 3500);
+};
+CS.modal = function (title, build) {
+  const close = () => back.remove();
+  const back = el("div", { class: "cs-modal-back", onclick: (e) => { if (e.target === back) close(); } },
+    el("div", { class: "cs-modal", role: "dialog", "aria-label": title }, title ? el("h3", { text: title }) : null, build(close)));
+  document.body.append(back);
+  const first = back.querySelector("input");
+  if (first) setTimeout(() => { first.focus(); if (first.select) first.select(); }, 30);
+  return close;
+};
+CS.ask = (title, message, okLabel, danger) => new Promise((resolve) => {
+  CS.modal(title, (close) => [
+    el("p", { text: message }),
+    el("div", { class: "cs-actions" },
+      el("button", { class: "cs-btn", type: "button", text: "Annuler", onclick: () => { close(); resolve(false); } }),
+      el("button", { class: "cs-btn " + (danger ? "danger" : "primary"), type: "button", text: okLabel || "Continuer", onclick: () => { close(); resolve(true); } }))
+  ]);
+});
+// Saisie d'un numéro dans une petite fenêtre (séquence ou plan)
+CS.askNumber = function (title, value, hint, apply) {
+  CS.modal(title, (close) => {
+    const err = el("p", { class: "cs-error", hidden: true });
+    const input = el("input", { class: "cs-input", type: "number", inputmode: "numeric", min: "1", value: String(value), "aria-label": title });
+    const go = async () => {
+      const r = await apply(input.value);
+      if (r === "" || r === null) close();
+      else { err.textContent = r; err.hidden = false; input.focus(); }
+    };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    return [hint ? el("p", { text: hint }) : null, input, err,
+      el("div", { class: "cs-actions" },
+        el("button", { class: "cs-btn", type: "button", text: "Annuler", onclick: close }),
+        el("button", { class: "cs-btn primary", type: "button", text: "Valider", onclick: go }))];
+  });
+};
+CS.previewVideo = function (p) {
+  CS.modal("Plan " + CS.key(p) + " · vidéo de référence", (close) => [
+    // Dans l'app : <iframe src="https://drive.google.com/file/d/ID/preview">
+    el("div", { class: "cs-video", "aria-label": "Lecteur vidéo" }, "▶"),
+    el("p", { text: p.video.name + " · Google Drive" }),
+    el("div", { class: "cs-actions" },
+      CS.readOnly ? null : el("button", { class: "cs-btn danger", type: "button", text: "Retirer", onclick: () => { close(); CS.removeVideo(p); } }),
+      CS.readOnly ? null : el("button", { class: "cs-btn", type: "button", text: "Changer", onclick: () => { close(); CS.pickVideo(p); } }),
+      el("button", { class: "cs-btn primary", type: "button", text: "Fermer", onclick: close }))
+  ]);
+};
+// Choix de la séquence d'un plan improvisé
+CS.improDialog = function (defaultSeq, at, after) {
+  const seqs = CS.seqs();
+  if (!seqs.length) return;
+  let seqId = defaultSeq !== null && defaultSeq !== undefined && CS.seq(defaultSeq) ? defaultSeq : seqs[0].id;
+  CS.modal("⚡ Plan improvisé", (close) => {
+    const chips = el("div", { class: "cs-chips" });
+    const info = el("p");
+    const desc = el("input", { class: "cs-input", type: "text", placeholder: "Ce qu'on tourne (facultatif)", "aria-label": "Description du plan improvisé" });
+    const go = el("button", { class: "cs-btn impro", type: "button" });
+    const refresh = () => {
+      chips.replaceChildren(...seqs.map((s) => el("button", { class: "cs-chip" + (s.id === seqId ? " on" : ""), type: "button", text: "SÉQ " + s.id, onclick: () => { seqId = s.id; refresh(); } })));
+      const n = seqId + "." + (CS.plansOf(seqId).length + 1);
+      info.textContent = "Numéroté " + n + ", à la fin de la séquence " + seqId + " : les autres plans gardent leur numéro.";
+      go.textContent = "Créer " + n;
+    };
+    go.addEventListener("click", () => { close(); const p = CS.addImpro(seqId, at, desc.value.trim()); if (after) after(p); });
+    refresh();
+    return [chips, info, desc, el("div", { class: "cs-actions" }, el("button", { class: "cs-btn", type: "button", text: "Annuler", onclick: close }), go)];
+  });
+};
+
+// --- GLISSER (bouton flottant ou poignée) ---
+// opt.resolve(x, y, under) renvoie { rect, before, text, run, into, hoverKey, hoverOpen } ou null.
+let drag = null;
+CS.dragging = () => !!drag;
+CS.beginDrag = function (e, opt) {
+  if (CS.readOnly || (e.button !== undefined && e.button !== 0)) return;
+  e.preventDefault();
+  CS.saveNow();
+  drag = { opt, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, raf: null, hoverKey: null, hoverTimer: null, armed: !!opt.armed };
+  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+  window.addEventListener("pointermove", onMove);
+  window.addEventListener("pointerup", onEnd);
+  window.addEventListener("pointercancel", onEnd);
+};
+function onMove(e) {
+  if (!drag) return;
+  drag.x = e.clientX; drag.y = e.clientY;
+  if (!drag.moved) {
+    if (Math.hypot(e.clientX - drag.x0, e.clientY - drag.y0) < 8) return;
+    drag.moved = true;
+    document.body.classList.add("cs-dragging");
+    drag.ghost = el("div", { class: "cs-ghost", text: drag.opt.label });
+    drag.line = el("div", { class: "cs-line" }, el("span"));
+    document.body.append(drag.ghost, drag.line);
+    if (drag.opt.onStart) drag.opt.onStart();
+    scrollLoop();
+  }
+  e.preventDefault();
+  drag.ghost.style.left = e.clientX + "px";
+  drag.ghost.style.top = (e.clientY - 22) + "px";
+  resolve();
+}
+function scroller() { return drag.opt.scroller ? drag.opt.scroller() : document.scrollingElement; }
+function scrollLoop() {
+  if (!drag) return;
+  const sc = scroller();
+  const r = sc === document.scrollingElement ? { top: 0, bottom: window.innerHeight } : sc.getBoundingClientRect();
+  const top = r.top + (drag.opt.topInset ? drag.opt.topInset() : 0) + 60;
+  const bottom = r.bottom - (drag.opt.bottomInset ? drag.opt.bottomInset() : 0) - 80;
+  if (drag.y < bottom - 80) drag.armed = true;   // les boutons sont en bas : défilement vers le bas seulement après être remonté
+  let d = 0;
+  if (drag.y < top) d = -Math.min(22, (top - drag.y) / 3 + 4);
+  else if (drag.armed && drag.y > bottom) d = Math.min(22, (drag.y - bottom) / 3 + 4);
+  if (d) { sc.scrollTop += d; resolve(); }
+  drag.raf = requestAnimationFrame(scrollLoop);
+}
+function resolve() {
+  document.querySelectorAll(".cs-into").forEach((n) => n.classList.remove("cs-into"));
+  const under = document.elementFromPoint(drag.x, drag.y);
+  const t = under ? drag.opt.resolve(drag.x, drag.y, under) : null;
+  drag.target = t;
+  if (t && t.hoverKey !== undefined && t.hoverKey !== drag.hoverKey) {
+    clearTimeout(drag.hoverTimer);
+    drag.hoverKey = t.hoverKey;
+    if (t.hoverOpen) drag.hoverTimer = setTimeout(() => { if (drag && drag.hoverKey === t.hoverKey) { t.hoverOpen(); CS.render(); resolve(); } }, 650);
+  }
+  if (!t) { drag.line.style.display = "none"; return; }
+  if (t.into) t.into.classList.add("cs-into");
+  const y = t.before ? t.rect.top - 5 : t.rect.bottom + 1;
+  Object.assign(drag.line.style, { display: "block", top: y + "px", left: t.rect.left + "px", width: t.rect.width + "px" });
+  drag.line.firstChild.textContent = t.text;
+}
+function onEnd(e) {
+  if (!drag) return;
+  const d = drag;
+  drag = null;
+  window.removeEventListener("pointermove", onMove);
+  window.removeEventListener("pointerup", onEnd);
+  window.removeEventListener("pointercancel", onEnd);
+  cancelAnimationFrame(d.raf);
+  clearTimeout(d.hoverTimer);
+  document.body.classList.remove("cs-dragging");
+  document.querySelectorAll(".cs-into").forEach((n) => n.classList.remove("cs-into"));
+  if (d.ghost) d.ghost.remove();
+  if (d.line) d.line.remove();
+  if (d.opt.onEnd) d.opt.onEnd();
+  if (e.type === "pointercancel") return;
+  if (!d.moved) { if (d.opt.onTap) d.opt.onTap(); return; }
+  if (d.target && d.target.run) d.target.run();
+}
+// Aide : position avant/après selon la moitié de l'élément
+CS.half = (node, y, cap) => { const r = node.getBoundingClientRect(); return { rect: r, before: y < r.top + Math.min(r.height / 2, cap || 1e9) }; };
+
+// --- APRÈS RENDU : surligner, faire défiler, donner le focus ---
+let after = {};
+CS.afterRender = function (o) { Object.assign(after, o); };
+function runAfter() {
+  const a = after;
+  after = {};
+  requestAnimationFrame(() => {
+    const scrollTo = a.scroll && document.querySelector(a.scroll);
+    if (scrollTo) scrollTo.scrollIntoView({ block: "center" });
+    const fl = a.flash && document.querySelector(a.flash);
+    if (fl) { fl.classList.remove("cs-flash"); void fl.offsetWidth; fl.classList.add("cs-flash"); if (!scrollTo) fl.scrollIntoView({ block: "nearest" }); }
+    const f = a.focus && document.querySelector(a.focus);
+    if (f) f.focus({ preventScroll: !!scrollTo });
+  });
+}
+
+// --- CLAVIER SUR TÉLÉPHONE : le champ touché se place juste au-dessus du clavier ---
+// En haut on laisse libres la barre de One App (hauteur à confirmer) et les éléments collés de la maquette.
+CS.ONEAPP_BAR = 56;
+CS.keyboard = function (topReserved) {
+  const place = (f) => {
+    if (window.matchMedia("(min-width: 900px)").matches || !f.isConnected || f.closest("[data-nokb]")) return;
+    const vv = window.visualViewport, r = f.getBoundingClientRect();
+    const top = (vv ? vv.offsetTop : 0) + CS.ONEAPP_BAR + (topReserved ? topReserved() : 0) + 8;
+    const bottom = (vv ? vv.offsetTop + vv.height : window.innerHeight) - 12;
+    let d = 0;
+    if (r.height > bottom - top) d = r.top - top;
+    else if (r.bottom > bottom) d = r.bottom - bottom;
+    else if (r.top < top) d = r.top - top;
+    if (Math.abs(d) > 2) window.scrollBy({ top: d, behavior: "smooth" });
+  };
+  const isField = (f) => f && f.matches && f.matches("textarea, input:not([type=button])");
+  // Pendant la saisie, les boutons du bas restent cachés (ils ne remontent pas avec le clavier)
+  document.addEventListener("focusout", () => setTimeout(() => document.body.classList.toggle("typing", isField(document.activeElement)), 0));
+  document.addEventListener("focusin", (e) => {
+    const f = e.target;
+    if (!isField(f)) return;
+    document.body.classList.add("typing");
+    if (f.type === "number") return;
+    if (window.visualViewport) window.visualViewport.addEventListener("resize", () => place(f), { once: true });
+    setTimeout(() => place(f), 350);
+  });
+  document.addEventListener("input", (e) => { if (e.target.matches && e.target.matches("textarea")) place(e.target); });
+};
+
+// --- PDF (impression du navigateur) : tableau en affichage normal, mise en page de scénario en affichage cahier ---
+CS.exportPDF = function (kind) {
+  CS.saveNow();
+  let area = document.getElementById("cs-print");
+  if (!area) { area = el("div", { id: "cs-print" }); document.body.append(area); }
+  const cahier = S().ui.style === "cahier";
+  area.className = cahier ? "cahier" : "";
+  const date = new Date().toLocaleDateString("fr-FR");
+  const title = kind === "travail" ? "Feuille de service" : "Découpage technique";
+  const head = [el("div", { class: "p-title", text: cahier ? CS.projectName() : title }),
+    el("div", { class: "p-sub" }, cahier ? title + " · " + date : el("span", {}, "PROJET : ", el("strong", { text: CS.projectName() }), " | ÉDITÉ LE : " + date))];
+  if (cahier) {
+    const out = [];
+    if (kind === "travail") CS.days().forEach((g) => {
+      out.push(el("div", { class: "p-day" }, el("span", { text: g.sep ? g.sep.text || "Journée" : "À placer" }), el("span", { text: CS.dayMinutes(g) ? CS.fmtMin(CS.dayMinutes(g)) : "" })));
+      g.items.forEach(({ p }) => out.push(el("div", { class: "p-line" }, el("b", { text: CS.key(p) }), el("span", {}, p.info || "", el("small", { text: CS.seqTitle(p.seqId) })), el("i", { text: p.temps || "" }))));
+    });
+    else CS.seqs().forEach((s) => {
+      out.push(el("div", { class: "p-slug" }, el("b", { text: String(s.id) }), el("span", { text: s.info || "" }), el("b", { text: String(s.id) })));
+      CS.plansOf(s.id).forEach((p) => out.push(el("div", { class: "p-shot" }, el("span", { text: CS.key(p) }), el("span", { text: (p.info || "") + (p.impro ? " (impro)" : "") }))));
+    });
+    area.replaceChildren(...head, ...out);
+  } else {
+    const body = el("tbody");
+    if (kind === "travail") {
+      S().tournageList.forEach((i) => {
+        if (i.type === "sep") body.append(el("tr", {}, el("td", { colspan: 3, class: "p-sep", text: "--- " + (i.text || "JOURNÉE") + " ---" })));
+        else { const p = CS.plan(i.seqId, i.planId); if (p) body.append(el("tr", {}, el("td", {}, el("strong", { text: "S" + p.seqId + " - P" + p.id }), p.impro ? " (Impro)" : ""), el("td", { text: p.info || "" }), el("td", { text: p.temps || "" }))); }
+      });
+      area.replaceChildren(...head, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "SÉQ - PLAN" }), el("th", { text: "DESCRIPTION" }), el("th", { text: "TEMPS" }))), body));
+    } else {
+      CS.seqs().forEach((s) => {
+        body.append(el("tr", { class: "p-seq" }, el("td", { text: String(s.id) }), el("td"), el("td", { text: s.info || "" })));
+        CS.plansOf(s.id).forEach((p) => body.append(el("tr", {}, el("td"), el("td", { text: String(p.id) + (p.impro ? " (Impro)" : "") }), el("td", { text: p.info || "" }))));
+      });
+      area.replaceChildren(...head, el("table", {}, el("thead", {}, el("tr", {}, el("th", { text: "SÉQ" }), el("th", { text: "PLAN" }), el("th", { text: "DESCRIPTION" }))), body));
+    }
+  }
+  window.print();
+};
+document.head.append(el("style", {}, `
+  #cs-print { display: none; }
+  @media print {
+    body > *:not(#cs-print) { display: none !important; }
+    body { background: #fff !important; color: #000 !important; }
+    #cs-print { display: block !important; font-family: system-ui, sans-serif; padding: 20px; color: #000; }
+    #cs-print .p-title { color: #d0021b; text-align: center; font-size: 26px; text-transform: uppercase; }
+    #cs-print .p-sub { text-align: center; color: #555; margin: 4px 0 24px; font-size: 13px; }
+    #cs-print table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    #cs-print th { background: #222 !important; color: #fff !important; padding: 8px; text-align: left; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    #cs-print td { border: 1px solid #ccc; padding: 8px; vertical-align: top; white-space: pre-wrap; }
+    #cs-print tr { page-break-inside: avoid; }
+    #cs-print .p-seq td { background: #e3f2fd !important; font-weight: bold; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    #cs-print .p-sep { background: #fff3e0 !important; text-align: center; font-weight: bold; color: #e65100; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+    #cs-print.cahier { font-family: "Courier Prime", "Courier New", Courier, monospace; font-size: 12pt; padding: 0 10mm; }
+    #cs-print.cahier .p-title { color: #000; text-decoration: underline; font-size: 14pt; font-weight: bold; }
+    #cs-print.cahier .p-sub { color: #000; text-transform: uppercase; }
+    #cs-print.cahier .p-slug { display: grid; grid-template-columns: 14mm 1fr 14mm; margin-top: 8mm; font-weight: bold; text-transform: uppercase; white-space: pre-wrap; page-break-after: avoid; }
+    #cs-print.cahier .p-slug b:last-child { text-align: right; }
+    #cs-print.cahier .p-shot { display: grid; grid-template-columns: 14mm 1fr; margin-top: 3mm; white-space: pre-wrap; page-break-inside: avoid; }
+    #cs-print.cahier .p-day { display: flex; justify-content: space-between; margin-top: 8mm; border-bottom: 2px solid #000; font-weight: bold; text-transform: uppercase; page-break-after: avoid; }
+    #cs-print.cahier .p-line { display: grid; grid-template-columns: 16mm 1fr 20mm; gap: 3mm; padding: 2mm 0; border-bottom: 1px dotted #999; page-break-inside: avoid; white-space: pre-wrap; }
+    #cs-print.cahier .p-line small { display: block; font-size: 9pt; color: #555; text-transform: uppercase; }
+    #cs-print.cahier .p-line i { font-style: normal; text-align: right; }
+  }`));
+
+// --- DÉMARRAGE ---
+let pendingRemote = null;
+const isTyping = () => { const a = document.activeElement; return !!(a && a.classList && a.classList.contains("cs-edit")); };
+CS.boot = function (render, onLoad) {
+  renderFn = () => { render(); runAfter(); };
+  document.addEventListener("focusout", () => setTimeout(() => {
+    if (pendingRemote && !isTyping()) { CS.state = pendingRemote; pendingRemote = null; CS.render(); }
+  }, 0));
+  OneAppAPI.onDataChange((data) => {
+    clearTimeout(saveTimer); saveTimer = null;
+    const next = CS.normalize(data);
+    next.ui = S().ui;   // l'affichage reste celui de cet appareil
+    if (isTyping() || drag) { pendingRemote = next; return; }
+    CS.state = next;
+    CS.render();
+  });
+  OneAppAPI.onModeChange((v) => { CS.saveNow(); CS.readOnly = v; CS.render(); });
+  if (OneAppAPI.onNameChange) OneAppAPI.onNameChange(() => CS.render());
+  OneAppAPI.loadData().then(({ app_data, readOnly }) => {
+    CS.state = CS.normalize(app_data);
+    CS.readOnly = readOnly;
+    const a = CS.state.ui.active;
+    CS.active = a && CS.plan(a.seqId, a.planId) ? { seqId: a.seqId, planId: a.planId } : null;
+    if (onLoad) onLoad();
+    CS.render();
+  });
+};
+})();
+</script>
+<script>
+const { el } = CS;
+const $ = (id) => document.getElementById(id);
+const ui = () => CS.state.ui;
+const clapOpen = () => !!ui().clap;
+let searchOn = false, query = "";
+const closedDays = new WeakSet();
+
+function render() {
+  const cahier = ui().style === "cahier";
+  document.body.classList.toggle("cahier", cahier);
+  document.body.classList.toggle("clap", clapOpen());
+  $("proj").textContent = CS.projectName();
+  $("bStyle").textContent = cahier ? "🗂️ Affichage normal" : "📜 Affichage cahier";
+  document.querySelectorAll("[data-view]").forEach((b) => b.classList.toggle("on", b.dataset.view === ui().view));
+  $("bSearch").classList.toggle("on", searchOn);
+  $("search").hidden = !searchOn;
+  renderClapper();
+  $("list").replaceChildren(ui().view === "scenario" ? renderScenario() : renderTournage());
+  renderAdders();
+}
+
+// Texte : modifiable, sauf claquette ouverte ou lecture seule
+function txt(obj, key, ph) {
+  return clapOpen() || CS.readOnly ? el("div", { class: "ro", text: obj[key] || "…" }) : CS.textField(obj, key, ph);
+}
+const dots = (p) => { const t = CS.takesOf(p.seqId, p.id); return t.length ? el("span", { class: "dots" }, t.map((x) => el("i", { style: "--av:var(--av-" + CS.avisKey(x.avis) + ")" }))) : null; };
+const take = (p) => { CS.active = { seqId: p.seqId, planId: p.id }; CS.setUI({}); };
+const editable = () => !clapOpen() && !CS.readOnly;
+
+// ---------- SCÉNARIO (découpage) ----------
+function renderScenario() {
+  const q = CS.parseQuery(query);
+  const out = el("div");
+  let n = 0, total = 0;
+  CS.seqs().forEach((s) => {
+    const plans = CS.plansOf(s.id), vis = plans.filter((p) => CS.matches(p, q));
+    total += plans.length; n += vis.length;
+    if (q && !vis.length) return;
+    out.append(el("section", { class: "seq", "data-seq": s.id, style: "--c:" + CS.seqColor(s.id) },
+      el("div", { class: "seq-head" },
+        el("div", { class: "snum num" }, el("span", { class: "lbl", text: "Séquence" }), el("b", { class: "n", text: String(s.id) })),
+        el("div", { class: "smain" }, txt(s, "info", "Lieu, moment, personnages…"),
+          editable() ? el("div", { class: "tools" },
+            el("button", { class: "tool", type: "button", text: "N° " + s.id + " ✎", onclick: () => CS.askNumber("Numéro de la séquence", s.id, "Les numéros de séquence peuvent sauter (1, 2, 5…) : la liste reste dans l'ordre.", async (v) => {
+              const r = await CS.setSeqNum(s.id, v);
+              if (r === "") { const id = parseInt(v, 10); CS.afterRender({ scroll: `.seq[data-seq="${id}"]`, flash: `.seq[data-seq="${id}"] .seq-head` }); CS.render(); }
+              return r; }) }),
+            el("button", { class: "tool danger", type: "button", text: "Supprimer la séquence", onclick: () => CS.deleteSeq(s.id) })) : null),
+        el("div", { class: "snum r", "aria-hidden": "true", text: String(s.id) })),
+      el("div", { class: "plans" }, vis.length ? vis.map(planCard) : el("div", { class: "empty", text: "Pas encore de plan : glissez « + Plan » ici." }))));
+  });
+  if (!CS.seqs().length) out.append(el("div", { class: "empty", text: "Pas encore de séquence : glissez « + Séquence » ici." }));
+  $("qn").textContent = q ? n + " / " + total : "";
+  return out;
+}
+function planCard(p) {
+  const shot = CS.takesOf(p.seqId, p.id).length;
+  return el("div", { class: "plan" + (p.impro ? " impro" : "") + (clapOpen() && CS.isActive(p) ? " cur" : "") + (clapOpen() && shot && !CS.isActive(p) ? " done" : ""),
+      "data-seq": p.seqId, "data-plan": p.id, style: "--c:" + CS.seqColor(p.seqId), onclick: clapOpen() ? () => take(p) : null },
+    el("div", { class: "num" }, el("span", { class: "lbl", text: "Plan" }), el("b", { class: "n", text: String(p.id) }), el("b", { class: "k", text: CS.key(p) }),
+      p.impro ? el("span", { class: "lbl", style: "color:var(--orange)", text: "impro" }) : null, dots(p)),
+    el("div", { class: "pmain" },
+      txt(p, "info", "Décrire le plan…"),
+      p.video ? el("button", { class: "vid", type: "button", onclick: (e) => { e.stopPropagation(); CS.previewVideo(p); } }, el("i", { text: "▶" }), el("span", { text: p.video.name })) : null,
+      editable() ? el("div", { class: "tools" },
+        el("button", { class: "tool", type: "button", text: "N° " + CS.key(p) + " ✎", onclick: () => moveDialog(p) }),
+        p.video ? null : el("button", { class: "tool", type: "button", text: "🎞️ Vidéo de référence", onclick: () => CS.pickVideo(p) }),
+        el("button", { class: "tool danger", type: "button", text: "Supprimer", onclick: () => CS.deletePlan(p.seqId, p.id) })) : null));
+}
+// Changer le numéro d'un plan : « 1.1 → 2.3 » le place directement ailleurs
+function moveDialog(p) {
+  CS.modal("Numéro du plan", (close) => {
+    const input = el("input", { class: "cs-input", type: "text", inputmode: "decimal", value: CS.key(p), "aria-label": "Nouveau numéro (séquence.plan)" });
+    const err = el("p", { class: "cs-error", hidden: true });
+    const go = async () => {
+      const r = await CS.movePlanTo(p, input.value);
+      if (r === null) return close();
+      if (r) { err.textContent = r; err.hidden = false; return input.focus(); }
+      close();
+      CS.afterRender({ scroll: `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"]`, flash: `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"]` });
+      CS.render();
+    };
+    input.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); go(); } });
+    return [el("div", { class: "move-num" }, el("span", { text: CS.key(p) + " →" }), input),
+      el("p", { text: "Écrivez séquence.plan : « 2.3 » place ce plan dans la séquence 2, en 3e position. Les autres plans se renumérotent." }),
+      err,
+      el("div", { class: "cs-actions" }, el("button", { class: "cs-btn", type: "button", text: "Annuler", onclick: close }), el("button", { class: "cs-btn primary", type: "button", text: "Valider", onclick: go }))];
+  });
+}
+
+// ---------- TOURNAGE (feuille de service) ----------
+function renderTournage() {
+  const q = CS.parseQuery(query);
+  const last = CS.lastTake(), next = CS.nextToShoot();
+  const out = el("div");
+  let n = 0, total = 0;
+  CS.days().forEach((g) => {
+    const vis = g.items.filter(({ p }) => CS.matches(p, q));
+    total += g.items.length; n += vis.length;
+    if (q && !vis.length) return;
+    const hasCur = clapOpen() && g.items.some(({ p }) => CS.isActive(p));
+    const open = q || !g.sep || hasCur || !closedDays.has(g.sep);
+    const mins = CS.dayMinutes(g), shot = g.items.filter(({ p }) => CS.takesOf(p.seqId, p.id).length).length;
+    const toggle = () => { open ? closedDays.add(g.sep) : closedDays.delete(g.sep); render(); };
+    out.append(el("section", { class: "day", "data-day": g.index },
+      el("div", { class: "day-head" },
+        g.sep && editable() ? el("button", { class: "handle", type: "button", "aria-label": "Déplacer la journée", text: "⠿", onpointerdown: (e) => CS.beginDrag(e, moveDayOpt(g.index, g.sep.text || "Journée")) }) : el("span"),
+        g.sep && editable() ? el("input", { class: "cs-edit", type: "text", value: g.sep.text || "", placeholder: "Nom de la journée (Lundi matin…)", "aria-label": "Nom de la journée",
+            oninput: (e) => { g.sep.text = e.target.value; CS.saveSoon(); }, onchange: CS.saveNow })
+          : el("button", { class: "dname", type: "button", style: "border:none;background:none;text-align:left;padding:0", text: g.sep ? g.sep.text || "Journée" : "À placer", onclick: g.sep ? toggle : null }),
+        g.sep ? el("button", { class: "mini", type: "button", "aria-label": open ? "Replier la journée" : "Déplier la journée", text: open ? "▼" : "▶", onclick: toggle }) : el("span"),
+        g.sep && editable() ? el("button", { class: "mini", type: "button", title: "Supprimer la journée (ses plans rejoignent la précédente)", text: "✕", onclick: () => CS.deleteDay(g.index) }) : el("span"),
+        el("small", { text: [g.items.length + " plan" + (g.items.length > 1 ? "s" : ""), mins ? "≈ " + CS.fmtMin(mins) : "", shot ? shot + "/" + g.items.length + " tournés" : ""].filter(Boolean).join(" · ") })),
+      open ? el("div", { class: "rows" }, vis.length ? vis.map(({ index, p }) => row(p, index, last, next)) : el("div", { class: "empty", text: "Aucun plan dans cette journée." })) : null));
+  });
+  if (!total && !q) out.append(el("div", { class: "empty", text: "Les plans créés dans le scénario apparaissent ici." }));
+  $("qn").textContent = q ? n + " / " + total : "";
+  return out;
+}
+function row(p, index, last, next) {
+  const shot = CS.takesOf(p.seqId, p.id).length, cur = CS.isActive(p);
+  const isLast = last && last.seqId === p.seqId && last.planId === p.id;
+  return el("div", { class: "row" + (p.impro ? " impro" : "") + (clapOpen() && cur ? " cur" : "") + (clapOpen() && shot && !cur ? " done" : ""),
+      "data-index": index, "data-key": CS.key(p), style: "--c:" + CS.seqColor(p.seqId), onclick: clapOpen() ? () => take(p) : null },
+    editable() ? el("button", { class: "handle", type: "button", "aria-label": "Déplacer le plan " + CS.key(p), text: "⠿", onpointerdown: (e) => CS.beginDrag(e, moveOpt(index, CS.key(p))) }) : el("span"),
+    el("div", { class: "code" }, el("span", { text: CS.key(p) }), dots(p)),
+    el("div", { class: "rtext" },
+      clapOpen() && isLast ? el("span", { class: "tag", text: "📍 Dernière prise · n° " + last.prise }) : clapOpen() && next === p ? el("span", { class: "tag next", text: "▶ À suivre" }) : null,
+      p.info || "…", el("small", { text: CS.seqTitle(p.seqId) })),
+    editable() ? el("input", { class: "temps", type: "text", value: p.temps || "", placeholder: "⏱ temps", "aria-label": "Temps du plan " + CS.key(p),
+        oninput: (e) => { p.temps = e.target.value; CS.saveSoon(); }, onchange: () => { CS.saveNow(); render(); } })
+      : el("span", { class: "temps ro", text: p.temps || "" }));
+}
+
+// ---------- CLAQUETTE ----------
+function renderClapper() {
+  const box = $("clapper");
+  if (!clapOpen()) return box.replaceChildren();
+  const p = CS.activePlan();
+  const close = el("button", { class: "cl-x", type: "button", "aria-label": "Fermer la claquette", title: "Fermer la claquette", text: "✕", onclick: () => CS.setUI({ clap: false }) });
+  if (!p) return box.replaceChildren(el("div", { class: "cl" }, el("div", { class: "cl-stripes" }, close),
+    el("div", { class: "cl-body" }, el("div", { class: "cl-empty", text: "Touchez un plan dans la liste pour le tourner." }))));
+  const n = CS.nextTake(p.seqId, p.id), takes = CS.takesOf(p.seqId, p.id), s = CS.seq(p.seqId);
+  const com = el("input", { id: "com", type: "text", placeholder: "Commentaire / raccord", autocomplete: "off", "aria-label": "Commentaire" });
+  box.replaceChildren(el("div", { class: "cl" + (p.impro ? " impro" : "") },
+    el("div", { class: "cl-stripes" }, close),
+    el("div", { class: "cl-body" },
+      el("div", { class: "cl-nums" },
+        el("div", {}, el("small", { text: "SÉQ" }), el("b", { text: String(p.seqId) })),
+        el("div", {}, el("small", { text: "PLAN" }), el("b", { text: String(p.id) })),
+        el("div", { class: "take" }, el("small", { text: "PRISE" }), el("b", { text: String(n) })),
+        CS.readOnly ? null : el("button", { class: "cl-impro", type: "button", text: "⚡ Impro", onclick: () => CS.improDialog(p.seqId, null, (np) => { CS.afterRender({ scroll: rowSel(np) }); CS.setUI({}); }) })),
+      el("div", { class: "cl-text", text: p.info || "Plan sans description" }),
+      el("div", { class: "cl-more" },
+        s && s.info ? el("div", { style: "opacity:.7;font-size:.88rem;white-space:pre-wrap", text: "SÉQ " + s.id + " · " + s.info }) : null,
+        p.video ? el("button", { class: "vid", type: "button", style: "background:rgba(255,255,255,.12);color:inherit", onclick: () => CS.previewVideo(p) }, el("i", { text: "▶" }), el("span", { text: "Vidéo de référence" })) : null,
+        takes.length ? el("div", { class: "cl-takes" }, takes.map((t) => el("div", { style: "--av:var(--av-" + CS.avisKey(t.avis) + ")" }, el("b", { text: "P" + t.prise }), el("span", { text: t.avis }), t.com ? el("small", { text: t.com }) : null))) : null),
+      el("div", { class: "cl-row" }, el("button", { class: "cl-clap", type: "button", text: "🎬 Clap · prise " + n, onclick: CS.clap }), com),
+      el("div", { class: "cl-avis" }, CS.AVIS_BUTTONS.map((a) => el("button", { class: "av k-" + a.k, type: "button", disabled: CS.readOnly, title: a.label + " : enregistrer la prise " + n,
+        onclick: () => CS.saveTake(a.label, com.value) }, el("span", { text: a.e }), el("b", { text: a.s }))))
+  )));
+}
+const rowSel = (p) => ui().view === "tournage" ? `.row[data-key="${CS.key(p)}"]` : `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"]`;
+function openClap() {
+  if (!CS.activePlan()) {
+    const last = CS.lastTake(), next = CS.nextToShoot();
+    const k = last ? CS.plan(last.seqId, last.planId) : next;
+    if (k) CS.active = { seqId: k.seqId, planId: k.id };
+  }
+  searchOn = false; query = ""; $("q").value = "";
+  const a = CS.activePlan();
+  if (a) CS.afterRender({ scroll: rowSel(a) });
+  CS.setUI({ clap: true });
+}
+
+// ---------- BOUTONS DE CRÉATION : à glisser ----------
+function renderAdders() {
+  const box = $("adders");
+  if (CS.readOnly || clapOpen()) return box.replaceChildren();
+  const B = (label, cls, opt) => {
+    const b = el("button", { class: "adder " + cls, type: "button", text: label, title: "Maintenez et glissez dans la liste", onpointerdown: (e) => CS.beginDrag(e, { ...opt, onTap: () => nudge(b, label) }) });
+    return b;
+  };
+  if (ui().view === "scenario") box.replaceChildren(B("+ Séquence", "alt", seqOpt()), B("+ Plan", "", planOpt()));
+  else box.replaceChildren(B("+ Journée", "", dayOpt()));
+}
+// Un simple appui ne crée rien : le bouton bouge et un message explique le geste
+let hintTimer = null;
+function nudge(btn, label) {
+  btn.classList.remove("wiggle"); void btn.offsetWidth; btn.classList.add("wiggle");
+  document.querySelectorAll(".drag-hint").forEach((h) => h.remove());
+  const h = el("div", { class: "drag-hint", role: "status", text: "Maintenez « " + label + " » et faites-le glisser dans la liste, à l'endroit voulu." });
+  document.body.append(h);
+  clearTimeout(hintTimer);
+  hintTimer = setTimeout(() => h.remove(), 3200);
+}
+const topInset = () => $("stick").offsetHeight;
+const bottomInset = () => 70;
+const focusPlan = (p) => { if (p) { CS.afterRender({ scroll: `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"]`, focus: `.plan[data-seq="${p.seqId}"][data-plan="${p.id}"] textarea` }); CS.render(); } };
+const focusSeq = (id) => { if (id) { CS.afterRender({ scroll: `.seq[data-seq="${id}"]`, focus: `.seq[data-seq="${id}"] .seq-head textarea` }); CS.render(); } };
+const focusDay = (at) => { CS.afterRender({ scroll: `.day[data-day="${at}"]`, focus: `.day[data-day="${at}"] .day-head input` }); CS.render(); };
+function seqOpt() {
+  return { label: "+ Séquence", topInset, bottomInset,
+    resolve: (x, y, under) => {
+      const seqs = CS.seqs(), sec = under.closest(".seq");
+      if (sec) {
+        const id = +sec.dataset.seq, h = CS.half(sec, y, 80), i = seqs.findIndex((s) => s.id === id);
+        const afterId = h.before ? (i > 0 ? seqs[i - 1].id : 0) : id;
+        return { ...h, text: "Séquence " + (afterId + 1) + " ici", run: async () => focusSeq(await CS.insertSeq(afterId)) };
+      }
+      const all = [...document.querySelectorAll(".seq")], lastS = all[all.length - 1];
+      if (!lastS || y > lastS.getBoundingClientRect().bottom) {
+        const afterId = seqs.length ? seqs[seqs.length - 1].id : 0;
+        return { rect: lastS ? lastS.getBoundingClientRect() : $("list").getBoundingClientRect(), before: !lastS, text: "Séquence " + (afterId + 1) + " (fin)", run: async () => focusSeq(await CS.insertSeq(afterId)) };
+      }
+      return null;
+    } };
+}
+function planOpt() {
+  return { label: "+ Plan", topInset, bottomInset,
+    resolve: (x, y, under) => {
+      const card = under.closest(".plan");
+      if (card) {
+        const seqId = +card.dataset.seq, id = +card.dataset.plan, h = CS.half(card, y), pos = CS.plansOf(seqId).findIndex((p) => p.id === id) + (h.before ? 0 : 1);
+        return { ...h, text: "Plan " + seqId + "." + (pos + 1) + (pos < CS.plansOf(seqId).length ? " · suivants +1" : ""), run: async () => focusPlan(await CS.insertPlan(seqId, pos)) };
+      }
+      const sec = under.closest(".seq");
+      if (sec) {
+        const seqId = +sec.dataset.seq, hd = sec.querySelector(".seq-head");
+        if (under.closest(".seq-head")) return { rect: hd.getBoundingClientRect(), before: false, into: hd, text: "Plan " + seqId + ".1 (en tête)", run: async () => focusPlan(await CS.insertPlan(seqId, 0)) };
+        const n = CS.plansOf(seqId).length;
+        return { rect: sec.getBoundingClientRect(), before: false, text: "Plan " + seqId + "." + (n + 1) + " (fin)", run: async () => focusPlan(await CS.insertPlan(seqId, n)) };
+      }
+      return null;
+    } };
+}
+function dayOpt() {
+  return { label: "+ Journée", topInset, bottomInset,
+    resolve: (x, y, under) => {
+      const r = under.closest(".row");
+      if (r) { const h = CS.half(r, y), at = +r.dataset.index + (h.before ? 0 : 1); return { ...h, text: "Nouvelle journée ici", run: () => focusDay(CS.insertDay(at)) }; }
+      const d = under.closest(".day");
+      if (d && d.dataset.day !== "-1") { const at = +d.dataset.day; return { rect: d.getBoundingClientRect(), before: true, text: "Nouvelle journée ici", run: () => focusDay(CS.insertDay(at)) }; }
+      const all = [...document.querySelectorAll(".day")], lastD = all[all.length - 1];
+      if (lastD && y > lastD.getBoundingClientRect().bottom) return { rect: lastD.getBoundingClientRect(), before: false, text: "Nouvelle journée (fin)", run: () => focusDay(CS.insertDay(CS.state.tournageList.length)) };
+      return null;
+    } };
+}
+function moveOpt(from, label) {
+  return { label, armed: true, topInset, bottomInset,
+    onStart: () => { const n = document.querySelector(`.row[data-index="${from}"]`); if (n) n.style.opacity = ".35"; },
+    resolve: (x, y, under) => {
+      const r = under.closest(".row");
+      if (r) {
+        const h = CS.half(r, y), at = +r.dataset.index + (h.before ? 0 : 1);
+        if (at === from || at === from + 1) return null;
+        return { ...h, text: "Déplacer ici", run: () => { const to = CS.moveItem(from, at); CS.afterRender({ flash: `.row[data-index="${to}"]` }); CS.render(); } };
+      }
+      const d = under.closest(".day");
+      if (d && d.dataset.day !== "-1") {
+        const sep = +d.dataset.day, hd = d.querySelector(".day-head"), at = sep + 1;
+        if (at === from || at === from + 1) return null;
+        const sepObj = CS.state.tournageList[sep];
+        return { rect: hd.getBoundingClientRect(), before: false, into: hd, text: "En tête de journée", hoverKey: "d" + sep, hoverOpen: () => closedDays.delete(sepObj), run: () => CS.moveItem(from, at) };
+      }
+      return null;
+    } };
+}
+function moveDayOpt(from, label) {
+  return { label: "🗓️ " + label, armed: true, topInset, bottomInset,
+    resolve: (x, y, under) => {
+      const d = under.closest(".day");
+      if (!d || d.dataset.day === "-1") return null;
+      const sep = +d.dataset.day, h = CS.half(d, y, 50), at = h.before ? sep : CS.dayEnd(sep);
+      if (at >= from && at <= CS.dayEnd(from)) return null;
+      return { ...h, text: "Déplacer la journée ici", run: () => CS.moveDay(from, at) };
+    } };
+}
+
+// ---------- EXTENSION PREMIERE PRO ----------
+function premiere() {
+  const L = (k, color, label) => el("div", { style: "--av:var(--av-" + k + ")" }, el("i"), el("span", {}, el("b", { text: label }), " → " + color));
+  CS.modal("L'extension Premiere Pro", (close) => [
+    el("p", { text: "Un panneau dans Premiere Pro qui fait le dérushage à votre place, grâce au clap joué par l'app sur le plateau." }),
+    el("ol", { class: "pr-steps" },
+      el("li", {}, el("span", { class: "ico", text: "🎬" }), el("span", {}, el("b", { text: "Sur le plateau" }), " : le clap de l'app joue un court signal sonore qui contient la séquence, le plan et la prise. La caméra et l'enregistreur son l'entendent.")),
+      el("li", {}, el("span", { class: "ico", text: "🔎" }), el("span", {}, el("b", { text: "Au montage" }), " : on sélectionne ses rushs dans Premiere, puis « Scanner & Synchro ». L'extension écoute le début de chaque fichier et retrouve la prise.")),
+      el("li", {}, el("span", { class: "ico", text: "🗂️" }), el("span", {}, el("b", { text: "Rangement automatique" }), " : chaque rush est renommé (« 5.3.2_… » pour séquence 5, plan 3, prise 2) et rangé dans un chutier SÉQUENCE 5 / VIDÉO ou AUDIO.")),
+      el("li", {}, el("span", { class: "ico", text: "🔗" }), el("span", {}, el("b", { text: "Synchronisation automatique" }), " : l'image et le son de chaque prise sont calés sur le clap, dans une séquence « SÉQUENCE 5 - SYNCHRO » prête à monter.")),
+      el("li", {}, el("span", { class: "ico", text: "📝" }), el("span", {}, el("b", { text: "Vos notes suivent" }), " : le panneau affiche le découpage et la feuille de service, avec l'avis et le commentaire de chaque prise."))),
+    el("h3", { style: "font-size:1rem;margin:4px 0 0", text: "Les couleurs dans Premiere" }),
+    el("p", { text: "Chaque rush prend la couleur de l'avis donné sur le plateau :" }),
+    el("div", { class: "legend" },
+      L("master", "vert", "⭐ Master"), L("ok", "bleu", "✅ OK"), L("moyen", "violet", "😐 Moyen"),
+      L("bof", "orange", "😕 Bof"), L("ko", "marron", "❌ KO"), L("verif", "rose", "❓ À vérifier")),
+    el("p", { text: "Un rush où le clap n'est pas reconnu va dans le chutier « NON RECONNUS » : il suffit de le ranger à la main. Astuce : jouez le clap près de la caméra et du micro, au début de la prise." }),
+    el("div", { class: "cs-actions" },
+      el("button", { class: "cs-btn", type: "button", text: "Fermer", onclick: close }),
+      el("button", { class: "cs-btn primary", type: "button", text: "Installer l'extension", onclick: () => { close(); CS.toast("L'installation sera bientôt disponible."); } }))
+  ]);
+}
+
+// ---------- ÉVÉNEMENTS ----------
+// Les outils d'un plan n'apparaissent que tant que son texte a le focus : les toucher ne doit pas le lui retirer
+document.addEventListener("pointerdown", (e) => { if (e.target.closest && e.target.closest(".tool")) e.preventDefault(); }, true);
+document.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => { window.scrollTo(0, 0); CS.setUI({ view: b.dataset.view }); }));
+$("bSearch").addEventListener("click", () => { searchOn = !searchOn; if (!searchOn) { query = ""; $("q").value = ""; } render(); if (searchOn) $("q").focus(); });
+$("q").addEventListener("input", (e) => { query = e.target.value; render(); });
+$("bClap").addEventListener("click", openClap);
+$("bStyle").addEventListener("click", () => CS.setUI({ style: ui().style === "cahier" ? "normal" : "cahier" }));
+$("bPdfD").addEventListener("click", () => CS.exportPDF("decoupage"));
+$("bPdfF").addEventListener("click", () => CS.exportPDF("travail"));
+$("bPr").addEventListener("click", premiere);
+CS.keyboard(() => (clapOpen() ? $("clapper").offsetHeight : $("stick").offsetHeight));
+CS.boot(render, () => { if (clapOpen()) { const a = CS.activePlan(); if (a) CS.afterRender({ scroll: rowSel(a) }); } });
+</script>
+</body>
+</html>
