@@ -240,7 +240,10 @@ body.cahier .tag.next { color: var(--text); }
 body.cahier .adder { border-radius: 0; font-family: var(--type); text-transform: uppercase; font-size: .85rem; }
 body.cahier .adder.alt { background: var(--panel); }
 body.cahier .cl { border-radius: 0; font-family: var(--type); }
-body.cahier .cl-clap { border-radius: 0; background: var(--slate-text); color: var(--slate); text-transform: uppercase; letter-spacing: .06em; }
+body.cahier .cl-clap { border-radius: 0; background: var(--slate-text); color: var(--slate); text-transform: uppercase; letter-spacing: 0; font-size: .9rem; padding: 0 10px; }
+body.cahier .cl-row { grid-template-columns: minmax(0, auto) minmax(9rem, 1fr); }
+@media (max-width: 899px) { body.cahier .cl-n { display: none; } }
+body.cahier .cl-row input { font-family: var(--type); font-size: .95rem; }
 body.cahier .av, body.cahier .cl-row input { border-radius: 0; }
 body.cahier .cs-modal { border-radius: 0; border-top: 3px solid var(--text); font-family: var(--type); }
 body.cahier .cs-btn, body.cahier .cs-input, body.cahier .cs-chip { border-radius: 0; }
@@ -863,11 +866,15 @@ CS.beginDrag = function (e, opt) {
   e.preventDefault();
   CS.saveNow();
   drag = { opt, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, raf: null, hoverKey: null, hoverTimer: null, armedTop: false, armedBottom: false };
-  try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
+  // Fin du geste écoutée partout (fenêtre, élément tenu, événements tactiles) : sur certains téléphones
+  // le « lâcher » n'arrive que par l'un d'eux, et un glisser ne doit jamais rester bloqué.
+  const src = e.currentTarget;
+  drag.src = src;
+  try { src.setPointerCapture(e.pointerId); } catch (err) {}
   window.addEventListener("pointermove", onMove);
-  window.addEventListener("pointerup", onEnd);
-  window.addEventListener("pointercancel", onEnd);
+  END_EVENTS.forEach((t) => { window.addEventListener(t, onEnd, true); src.addEventListener(t, onEnd); });
 };
+const END_EVENTS = ["pointerup", "pointercancel", "touchend", "touchcancel", "mouseup"];
 function onMove(e) {
   if (!drag) return;
   drag.x = e.clientX; drag.y = e.clientY;
@@ -924,8 +931,7 @@ function onEnd(e) {
   const d = drag;
   drag = null;
   window.removeEventListener("pointermove", onMove);
-  window.removeEventListener("pointerup", onEnd);
-  window.removeEventListener("pointercancel", onEnd);
+  END_EVENTS.forEach((t) => { window.removeEventListener(t, onEnd, true); if (d.src) d.src.removeEventListener(t, onEnd); });
   cancelAnimationFrame(d.raf);
   clearTimeout(d.hoverTimer);
   document.body.classList.remove("cs-dragging");
@@ -933,9 +939,11 @@ function onEnd(e) {
   if (d.ghost) d.ghost.remove();
   if (d.line) d.line.remove();
   if (d.opt.onEnd) d.opt.onEnd();
-  if (e.type === "pointercancel") return;
-  if (!d.moved) { if (d.opt.onTap) d.opt.onTap(); return; }
+  if (!d.moved) { if (e.type === "pointerup" || e.type === "mouseup" || e.type === "touchend") { if (d.opt.onTap) d.opt.onTap(); } return; }
+  // Lâché (ou geste interrompu par le téléphone) : on dépose là où le trait l'indiquait ;
+  // sinon on redessine pour remettre le plan tenu dans son état normal.
   if (d.target && d.target.run) d.target.run();
+  else CS.render();
 }
 // Aide : position avant/après selon la moitié de l'élément
 CS.half = (node, y, cap) => { const r = node.getBoundingClientRect(); return { rect: r, before: y < r.top + Math.min(r.height / 2, cap || 1e9) }; };
@@ -1238,7 +1246,7 @@ function renderClapper() {
         s && s.info ? el("div", { style: "opacity:.7;font-size:.88rem;white-space:pre-wrap", text: "SÉQ " + s.id + " · " + s.info }) : null,
         p.video ? el("button", { class: "vid", type: "button", style: "background:rgba(255,255,255,.12);color:inherit", onclick: () => CS.previewVideo(p) }, el("i", { text: "▶" }), el("span", { text: "Vidéo de référence" })) : null,
         takes.length ? el("div", { class: "cl-takes" }, takes.map((t) => el("div", { style: "--av:var(--av-" + CS.avisKey(t.avis) + ")" }, el("b", { text: "P" + t.prise }), el("span", { text: t.avis }), t.com ? el("small", { text: t.com }) : null))) : null),
-      el("div", { class: "cl-row" }, el("button", { class: "cl-clap", type: "button", text: "🎬 Clap · prise " + n, onclick: CS.clap }), com),
+      el("div", { class: "cl-row" }, el("button", { class: "cl-clap", type: "button", onclick: CS.clap }, "🎬 Clap", el("span", { class: "cl-n", text: " · prise " + n })), com),
       el("div", { class: "cl-avis" }, CS.AVIS_BUTTONS.map((a) => el("button", { class: "av k-" + a.k, type: "button", disabled: CS.readOnly, title: a.label + " : enregistrer la prise " + n,
         onclick: () => CS.saveTake(a.label, com.value) }, el("span", { text: a.e }), el("b", { text: a.s }))))
   )));
