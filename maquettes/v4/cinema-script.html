@@ -38,8 +38,9 @@ button { cursor: pointer; }
 /* --- Haut de page --- */
 .top { display: grid; gap: 10px; padding-bottom: 12px; }
 .top h1 { margin: 0; font-size: 1.45rem; line-height: 1.2; }
-.top-actions { display: flex; flex-wrap: wrap; gap: 8px; }
-.tbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 9px 12px; font-weight: 700; font-size: .9rem; }
+.top-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+@media (min-width: 600px) { .top-actions { display: flex; flex-wrap: wrap; } }
+.tbtn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 9px 10px; font-weight: 700; font-size: .9rem; line-height: 1.25; }
 .tbtn.pdf1 { background: var(--orange); border-color: var(--orange); color: #111; }
 .tbtn.pdf2 { background: var(--teal); border-color: var(--teal); color: #071c17; }
 .tbtn.pr { background: #2a0a4a; border-color: #2a0a4a; color: #e8c6ff; font-family: var(--font); letter-spacing: .02em; }
@@ -201,7 +202,7 @@ body.cahier { --bg: #e7e7e3; --panel: #ffffff; --panel-2: #f2f2ee; --line: #d6d6
 body.cahier .page { background: var(--panel); min-height: 100vh; box-shadow: 0 0 0 1px var(--line); padding-left: 18px; padding-right: 18px; }
 @media (min-width: 700px) { body.cahier .page { padding-left: 48px; padding-right: 48px; } }
 body.cahier .top h1 { text-align: center; text-transform: uppercase; text-decoration: underline; text-underline-offset: 5px; font-size: 1.1rem; letter-spacing: .06em; }
-body.cahier .top-actions { justify-content: center; }
+@media (min-width: 600px) { body.cahier .top-actions { justify-content: center; } }
 body.cahier .tbtn { border-radius: 0; border: 1px solid var(--text); background: none; color: var(--text); font-weight: 400; text-transform: uppercase; font-size: .78rem; }
 body.cahier .stick, body.cahier.clap .clapper { background: var(--panel); }
 body.cahier .seg, body.cahier .ic { border-radius: 0; border-color: var(--text); }
@@ -861,7 +862,7 @@ CS.beginDrag = function (e, opt) {
   if (CS.readOnly || (e.button !== undefined && e.button !== 0)) return;
   e.preventDefault();
   CS.saveNow();
-  drag = { opt, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, raf: null, hoverKey: null, hoverTimer: null, armed: !!opt.armed };
+  drag = { opt, x0: e.clientX, y0: e.clientY, x: e.clientX, y: e.clientY, moved: false, target: null, ghost: null, line: null, raf: null, hoverKey: null, hoverTimer: null, armedTop: false, armedBottom: false };
   try { e.currentTarget.setPointerCapture(e.pointerId); } catch (err) {}
   window.addEventListener("pointermove", onMove);
   window.addEventListener("pointerup", onEnd);
@@ -892,10 +893,13 @@ function scrollLoop() {
   const r = sc === document.scrollingElement ? { top: 0, bottom: window.innerHeight } : sc.getBoundingClientRect();
   const top = r.top + (drag.opt.topInset ? drag.opt.topInset() : 0) + 60;
   const bottom = r.bottom - (drag.opt.bottomInset ? drag.opt.bottomInset() : 0) - 80;
-  if (drag.y < bottom - 80) drag.armed = true;   // les boutons sont en bas : défilement vers le bas seulement après être remonté
+  // Le défilement automatique ne démarre que si le doigt est d'abord sorti de la zone du bord :
+  // attraper un plan tout en haut (ou un bouton tout en bas) ne fait pas défiler la page toute seule.
+  if (drag.y > top + 30) drag.armedTop = true;
+  if (drag.y < bottom - 30) drag.armedBottom = true;
   let d = 0;
-  if (drag.y < top) d = -Math.min(22, (top - drag.y) / 3 + 4);
-  else if (drag.armed && drag.y > bottom) d = Math.min(22, (drag.y - bottom) / 3 + 4);
+  if (drag.armedTop && drag.y < top) d = -Math.min(22, (top - drag.y) / 3 + 4);
+  else if (drag.armedBottom && drag.y > bottom) d = Math.min(22, (drag.y - bottom) / 3 + 4);
   if (d) { sc.scrollTop += d; resolve(); }
   drag.raf = requestAnimationFrame(scrollLoop);
 }
@@ -1326,7 +1330,7 @@ function dayOpt() {
     } };
 }
 function moveOpt(from, label) {
-  return { label, armed: true, topInset, bottomInset,
+  return { label, topInset, bottomInset,
     onStart: () => { const n = document.querySelector(`.row[data-index="${from}"]`); if (n) n.style.opacity = ".35"; },
     resolve: (x, y, under) => {
       const r = under.closest(".row");
@@ -1346,7 +1350,7 @@ function moveOpt(from, label) {
     } };
 }
 function moveDayOpt(from, label) {
-  return { label: "🗓️ " + label, armed: true, topInset, bottomInset,
+  return { label: "🗓️ " + label, topInset, bottomInset,
     resolve: (x, y, under) => {
       const d = under.closest(".day");
       if (!d || d.dataset.day === "-1") return null;
