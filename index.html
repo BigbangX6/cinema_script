@@ -452,10 +452,42 @@
             renderApp();
         }
         
+        // --- IPHONE / IPAD : RENDRE LE CLAP AUDIBLE (sans toucher à DigitalClapper) ---
+        // Bouton silencieux : Safari coupe Web Audio en mode silencieux -> audioSession "playback"
+        // (iOS 17+) et, en renfort, un <audio> muet joué pendant le clap.
+        // Après verrouillage / appel, le contexte est "interrupted" : on repart d'un contexte neuf.
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+        let silentAudio = null;
+        function silentWav(seconds) {
+            const n = 8000 * seconds, b = new Uint8Array(44 + n), v = new DataView(b.buffer);
+            const str = (o, t) => { for (let i = 0; i < t.length; i++) b[o + i] = t.charCodeAt(i); };
+            str(0, "RIFF"); v.setUint32(4, 36 + n, true); str(8, "WAVEfmt "); v.setUint32(16, 16, true);
+            v.setUint16(20, 1, true); v.setUint16(22, 1, true); v.setUint32(24, 8000, true); v.setUint32(28, 8000, true);
+            v.setUint16(32, 1, true); v.setUint16(34, 8, true); str(36, "data"); v.setUint32(40, n, true);
+            b.fill(128, 44);
+            let bin = ""; for (let i = 0; i < b.length; i += 8192) bin += String.fromCharCode.apply(null, b.subarray(i, i + 8192));
+            return "data:audio/wav;base64," + btoa(bin);
+        }
+        function prepareAudio() {
+            if (!isIOS) return;
+            try { if (navigator.audioSession) navigator.audioSession.type = "playback"; } catch (e) {}
+            try {
+                if (!silentAudio) { silentAudio = new Audio(silentWav(8)); silentAudio.setAttribute("playsinline", ""); }
+                silentAudio.currentTime = 0;
+                const p = silentAudio.play(); if (p && p.catch) p.catch(() => {});
+            } catch (e) {}
+            const ctx = clapper.audioCtx;
+            if (ctx && (ctx.state === "interrupted" || ctx.state === "closed")) {
+                try { if (ctx.state !== "closed") ctx.close().catch(() => {}); } catch (e) {}
+                clapper.audioCtx = null;
+            }
+        }
+
         // --- DECLENCHEMENT DU CLAP AUDIO ---
         function playClapAudio() {
             if (activeSeq !== null && activePlan !== null) {
                 const nextTake = db.takes.filter(t => t.seqId === activeSeq && t.planId === activePlan).length + 1;
+                prepareAudio();
                 clapper.play(activeSeq, activePlan, nextTake);
             } else {
                 alert("Veuillez d'abord sélectionner un plan.");
